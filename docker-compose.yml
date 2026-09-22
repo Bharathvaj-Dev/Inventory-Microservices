@@ -1,0 +1,55 @@
+services:
+
+  product-service:
+    image: nginx:alpine
+    container_name: product-service
+    expose:
+      - "80"
+    networks:
+      - inventory-net
+
+  inventory-service:
+    image: nginx:alpine
+    container_name: inventory-service
+    expose:
+      - "80"
+    networks:
+      - inventory-net
+
+  purchase-service:
+    image: nginx:alpine
+    container_name: purchase-service
+    expose:
+      - "80"
+    networks:
+      - inventory-net
+
+  sale-service:
+    image: nginx:alpine
+    container_name: sale-service
+    expose:
+      - "80"
+    networks:
+      - inventory-net
+
+  localstack:
+    image: localstack/localstack:3.8
+    container_name: localstack
+    ports:
+      - "4566:4566"
+    environment:
+      SERVICES: s3,sqs,sns,dynamodb
+      AWS_DEFAULT_REGION: us-east-1
+      DEBUG: "0"
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - inventory-net
+
+networks:
+  inventory-net:
+    driver: bridge
+
+volumes:
+  localstack_data:

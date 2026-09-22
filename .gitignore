@@ -1,0 +1,12 @@
+# Maven
+**/target/
+**/.mvn/timing.properties
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
