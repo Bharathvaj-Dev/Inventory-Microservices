@@ -17,12 +17,22 @@ public class SqsConfig {
     @Bean
     public SqsAsyncClient sqsAsyncClient() {
 
+        String endpoint = System.getenv().getOrDefault(
+                "AWS_ENDPOINT_URL_SQS",
+                System.getenv().getOrDefault(
+                        "AWS_ENDPOINT_URL",
+                        "http://localhost:4566"
+                )
+        );
+
         return SqsAsyncClient.builder()
-                .endpointOverride(URI.create("http://localhost:4566"))
+                .endpointOverride(URI.create(endpoint))
                 .region(Region.US_EAST_1)
                 .credentialsProvider(
                         StaticCredentialsProvider.create(
-                                AwsBasicCredentials.create("test", "test")))
+                                AwsBasicCredentials.create("test", "test")
+                        )
+                )
                 .build();
     }
 

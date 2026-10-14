@@ -179,6 +179,7 @@ services:
     networks:
       - inventory-net
 
+
   # =========================
   # LOCALSTACK
   # =========================
@@ -200,8 +201,10 @@ services:
     volumes:
       - localstack_data:/var/lib/localstack
       - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./infra/localstack:/etc/localstack/init/ready.d"
     networks:
       - inventory-net
+
 
   # =========================
   # LOKI

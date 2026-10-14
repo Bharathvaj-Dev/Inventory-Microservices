@@ -32,3 +32,4 @@ Thumbs.db
 # Build and extracted artifacts
 BOOT-INF/
 temp-sale-inspect/
+purchase-docker-build.log
