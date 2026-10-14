@@ -1,0 +1,93 @@
+
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  main:
+    web-application-type: reactive
+
+  application:
+    name: api-gateway
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration
+      - org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration
+      - org.springframework.boot.jdbc.autoconfigure.DataSourceTransactionManagerAutoConfiguration
+
+  cloud:
+    gateway:
+      server:
+        webflux:
+          globalcors:
+            add-to-simple-url-handler-mapping: true
+            cors-configurations:
+              '[/**]':
+                allowedOrigins:
+                  - ${FRONTEND_ORIGIN:http://localhost:5173}
+                  - ${FRONTEND_ORIGIN_ALT:http://127.0.0.1:5173}
+                allowedMethods:
+                  - GET
+                  - POST
+                  - PUT
+                  - PATCH
+                  - DELETE
+                  - OPTIONS
+                allowedHeaders:
+                  - "*"
+                allowCredentials: true
+
+          default-filters:
+            - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin, RETAIN_UNIQUE
+
+          routes:
+            - id: product-service
+              uri: ${PRODUCT_SERVICE_URL:http://localhost:8081}
+              predicates:
+                - Path=/api/products/**,/api/categories/**
+
+            - id: inventory-service
+              uri: ${INVENTORY_SERVICE_URL:http://localhost:8082}
+              predicates:
+                - Path=/api/inventory/**
+
+            - id: purchase-service
+              uri: ${PURCHASE_SERVICE_URL:http://localhost:8083}
+              predicates:
+                - Path=/api/purchases/**
+
+            - id: sale-service
+              uri: ${SALE_SERVICE_URL:http://localhost:8084}
+              predicates:
+                - Path=/api/sales/**
+
+            - id: notification-service
+              uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8085}
+              predicates:
+                - Path=/api/notifications/**
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    urls:
+      - name: Product Service
+        url: ${PRODUCT_SERVICE_URL:http://localhost:8081}/v3/api-docs
+      - name: Inventory Service
+        url: ${INVENTORY_SERVICE_URL:http://localhost:8082}/v3/api-docs
+      - name: Purchase Service
+        url: ${PURCHASE_SERVICE_URL:http://localhost:8083}/v3/api-docs
+      - name: Sale Service
+        url: ${SALE_SERVICE_URL:http://localhost:8084}/v3/api-docs
+      - name: Notification Service
+        url: ${NOTIFICATION_SERVICE_URL:http://localhost:8085}/v3/api-docs

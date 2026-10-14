@@ -1,16 +1,83 @@
+
 server:
-  port: 8084
+  port: ${SERVER_PORT:8084}
 
 spring:
   application:
     name: sale-service
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/sale_db
-    username: postgres
-    password: postgres
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/sale_db}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
 
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: ${SPRING_JPA_SHOW_SQL:true}
+
+  cloud:
+    aws:
+      endpoint: ${AWS_ENDPOINT_URL:http://localhost:4566}
+      region:
+        static: ${AWS_REGION:us-east-1}
+      credentials:
+        access-key: ${AWS_ACCESS_KEY_ID:test}
+        secret-key: ${AWS_SECRET_ACCESS_KEY:test}
+      sqs:
+        endpoint: ${AWS_ENDPOINT_URL_SQS:${AWS_ENDPOINT_URL:http://localhost:4566}}
+
+    openfeign:
+      circuitbreaker:
+        enabled: false
+      client:
+        config:
+          inventory-service:
+            connectTimeout: ${INVENTORY_CONNECT_TIMEOUT:3000}
+            readTimeout: ${INVENTORY_READ_TIMEOUT:10000}
+
+inventory:
+  service:
+    url: ${INVENTORY_SERVICE_URL:http://localhost:8082}
+
+resilience4j:
+  retry:
+    instances:
+      inventory:
+        maxAttempts: ${INVENTORY_RETRY_MAX_ATTEMPTS:3}
+        waitDuration: ${INVENTORY_RETRY_WAIT_DURATION:1s}
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+
+  timelimiter:
+    instances:
+      inventory:
+        timeoutDuration: ${INVENTORY_TIMEOUT_DURATION:5s}
+
+  circuitbreaker:
+    instances:
+      inventory:
+        failureRateThreshold: 50
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 10
+        waitDurationInOpenState: 30s
+        permittedNumberOfCallsInHalfOpenState: 2
+        registerHealthIndicator: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,circuitbreakers,circuitbreakerevents
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+
+logging:
+  level:
+    inventory.sale.client.InventoryFeignClient: DEBUG
+    feign: DEBUG
+    io.github.resilience4j: DEBUG

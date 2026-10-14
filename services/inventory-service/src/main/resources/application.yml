@@ -1,0 +1,28 @@
+
+server:
+  port: ${SERVER_PORT:8082}
+
+spring:
+  application:
+    name: inventory-service
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/inventory_db}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+
+  cloud:
+    aws:
+      region:
+        static: ${AWS_REGION:us-east-1}
+      credentials:
+        access-key: ${AWS_ACCESS_KEY_ID:test}
+        secret-key: ${AWS_SECRET_ACCESS_KEY:test}
+      sqs:
+        endpoint: ${AWS_ENDPOINT_URL_SQS:${AWS_ENDPOINT_URL:http://localhost:4566}}
+        listener:
+          auto-startup: ${SQS_LISTENER_AUTO_STARTUP:true}
+
+product:
+  service:
+    url: ${PRODUCT_SERVICE_URL:http://localhost:8081}

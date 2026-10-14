@@ -10,3 +10,25 @@
 # OS
 .DS_Store
 Thumbs.db
+
+/backups/
+
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+
+# Local Spring configuration
+**/application-local.yml
+**/application-local.yaml
+
+
+# Eclipse / Spring Tool Suite
+.classpath
+.project
+.settings/
+
+# Build and extracted artifacts
+BOOT-INF/
+temp-sale-inspect/
