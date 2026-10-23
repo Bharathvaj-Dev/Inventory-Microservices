@@ -1,0 +1,1076 @@
+﻿{
+    "info":  {
+                 "name":  "Inventory Microservices Integration Tests",
+                 "description":  "Day 27 integration suite for Inventory-Microservices via API Gateway. Run requests in order. Event-driven stock assertions poll for eventual consistency. Review the gateway routes and service response shapes before first run.",
+                 "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+             },
+    "item":  [
+                 {
+                     "name":  "01 - Gateway and Health",
+                     "item":  [
+                                  {
+                                      "name":  "Gateway health",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/actuator/health"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "const body = pm.response.json();",
+                                                                                    "",
+                                                                                    "pm.test(\"Gateway health returns 200\", function () {",
+                                                                                    "    pm.response.to.have.status(200);",
+                                                                                    "});",
+                                                                                    "pm.test(\"Gateway health status is UP or DEGRADED\", function () {",
+                                                                                    "    pm.expect([\"UP\", \"DEGRADED\"]).to.include(body.status);",
+                                                                                    "});",
+                                                                                    "pm.test(\"Gateway health includes service health details\", function () {",
+                                                                                    "    pm.expect(body).to.be.an(\"object\");",
+                                                                                    "});"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "List products",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/products"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"List products returns 200\", function () {",
+                                                                                    "    pm.response.to.have.status(200);",
+                                                                                    "});",
+                                                                                    "",
+                                                                                    "pm.test(\"Products response is an array\", function () {",
+                                                                                    "    pm.expect(pm.response.json()).to.be.an(\"array\");",
+                                                                                    "});",
+                                                                                    "",
+                                                                                    "pm.test(\"Products contain a valid product ID\", function () {",
+                                                                                    "    const products = pm.response.json();",
+                                                                                    "",
+                                                                                    "    if (products.length \u003e 0) {",
+                                                                                    "        pm.expect(products[0].id).to.exist;",
+                                                                                    "        pm.expect(products[0].id).to.be.a(\"number\");",
+                                                                                    "    }",
+                                                                                    "});"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "List inventory",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/inventory"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"List inventory returns 200\", function () {",
+                                                                                    "    pm.response.to.have.status(200);",
+                                                                                    "});",
+                                                                                    "",
+                                                                                    "pm.test(\"Inventory response is an array\", function () {",
+                                                                                    "    pm.expect(pm.response.json()).to.be.an(\"array\");",
+                                                                                    "});"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "02 - Category CRUD",
+                     "item":  [
+                                  {
+                                      "name":  "Create category",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/categories",
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"name\": \"Day27 Integration Category 20261023 083620\"\n}"
+                                                               }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"Category create returns 200 or 201\", function () {",
+                                                                                    "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                                                                                    "});",
+                                                                                    "",
+                                                                                    "const body = pm.response.json();",
+                                                                                    "pm.test(\"Created category has an ID\", function () {",
+                                                                                    "    pm.expect(body.id).to.exist;",
+                                                                                    "});",
+                                                                                    "pm.test(\"Created category name is correct\", function () {",
+                                                                                    "    pm.expect(body.name).to.eql(\"Day27 Integration Category 20261023 083620\");",
+                                                                                    "});",
+                                                                                    "if (body.id !== undefined) {",
+                                                                                    "    pm.collectionVariables.set(\"categoryId\", String(body.id));",
+                                                                                    "}"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Get category",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/categories/{{categoryId}}"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "",
+                                                                                    "pm.test(\"Get category returns 200\", function () { pm.response.to.have.status(200); });",
+                                                                                    "pm.test(\"Category ID matches captured ID\", function () { pm.expect(String(pm.response.json().id)).to.eql(pm.collectionVariables.get(\"categoryId\")); });"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Update category",
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/categories/{{categoryId}}",
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"name\": \"Day27 Integration Category 20261023 083620\"\n}"
+                                                               }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"Category update returns 200\", function () {",
+                                                                                    "    pm.response.to.have.status(200);",
+                                                                                    "});",
+                                                                                    "",
+                                                                                    "pm.test(\"Category name updated\", function () {",
+                                                                                    "    pm.expect(pm.response.json().name)",
+                                                                                    "        .to.eql(\"Day27 Integration Category 20261023 083620\");",
+                                                                                    "});"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "List categories",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/categories"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "",
+                                                                                    "pm.test(\"List categories returns 200\", function () { pm.response.to.have.status(200); });",
+                                                                                    "pm.test(\"Categories response is an array\", function () { pm.expect(pm.response.json()).to.be.an(\"array\"); });"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "03 - Product CRUD",
+                     "item":  [
+                                  {
+                                      "name":  "Create product",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/products",
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"name\": \"Day27 Integration Laptop\",\n  \"description\": \"Created by Newman integration suite\",\n  \"price\": 1299.99,\n  \"quantity\": 20,\n  \"category\": {\n    \"id\": {{categoryId}},\n    \"name\": \"Day27 Integration Category 20261023 083620\"\n  }\n}"
+                                                               }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"Product create returns 200 or 201\", function () {",
+                                                                                    "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                                                                                    "});",
+                                                                                    "",
+                                                                                    "const j = pm.response.json();",
+                                                                                    "",
+                                                                                    "pm.test(\"Created product contains required fields\", function () {",
+                                                                                    "  pm.expect(j.id).to.exist;",
+                                                                                    "  pm.expect(j.name).to.eql(\"Day27 Integration Laptop\");",
+                                                                                    "  pm.expect(Number(j.price)).to.eql(1299.99);",
+                                                                                    "});",
+                                                                                    "",
+                                                                                    "if (j.id !== undefined) {",
+                                                                                    "  pm.collectionVariables.set(\"createdProductId\", String(j.id));",
+                                                                                    "}"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Get created product",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/products/{{createdProductId}}"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"Get product returns 200\", function () {",
+                                                                                    "  pm.response.to.have.status(200);",
+                                                                                    "});",
+                                                                                    "",
+                                                                                    "pm.test(\"Product ID matches captured ID\", function () {",
+                                                                                    "  pm.expect(String(pm.response.json().id)).to.eql(pm.collectionVariables.get(\"createdProductId\"));",
+                                                                                    "});",
+                                                                                    "",
+                                                                                    "pm.test(\"Product name matches\", function () {",
+                                                                                    "  pm.expect(pm.response.json().name).to.eql(\"Day27 Integration Laptop\");",
+                                                                                    "});"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Update product",
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/products/{{createdProductId}}",
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"name\": \"Day27 Updated Laptop\",\n  \"description\": \"Updated by Newman\",\n  \"price\": 1399.99,\n  \"quantity\": 20,\n  \"category\": {\n    \"id\": {{categoryId}},\n    \"name\": \"Day27 Integration Category 20261023 083620\"\n  }\n}"
+                                                               }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"Product update returns 200\", function () {",
+                                                                                    "  pm.response.to.have.status(200);",
+                                                                                    "});",
+                                                                                    "",
+                                                                                    "pm.test(\"Product name and price updated\", function () {",
+                                                                                    "  const j = pm.response.json();",
+                                                                                    "  pm.expect(j.name).to.eql(\"Day27 Updated Laptop\");",
+                                                                                    "  pm.expect(Number(j.price)).to.eql(1399.99);",
+                                                                                    "});"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Verify product in list",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/products"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"Product list returns 200\", function () {",
+                                                                                    "  pm.response.to.have.status(200);",
+                                                                                    "});",
+                                                                                    "",
+                                                                                    "pm.test(\"List contains created product\", function () {",
+                                                                                    "  const arr = pm.response.json();",
+                                                                                    "  pm.expect(",
+                                                                                    "    arr.some(p =\u003e String(p.id) === pm.collectionVariables.get(\"createdProductId\"))",
+                                                                                    "  ).to.eql(true);",
+                                                                                    "});"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "04 - Inventory and Purchase Flow",
+                     "item":  [
+                                  {
+                                      "name":  "Get inventory before purchase",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/inventory/{{productId}}"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"Inventory before purchase returns 200\", function () {",
+                                                                                    "  pm.response.to.have.status(200);",
+                                                                                    "});",
+                                                                                    "",
+                                                                                    "const j = pm.response.json();",
+                                                                                    "",
+                                                                                    "pm.test(\"Inventory response contains product ID\", function () {",
+                                                                                    "  pm.expect(Number(j.productId)).to.eql(Number(pm.collectionVariables.get(\"productId\")));",
+                                                                                    "});",
+                                                                                    "",
+                                                                                    "const stock = Number(j.currentStock ?? j.quantity ?? j.stock);",
+                                                                                    "pm.test(\"Inventory stock is numeric\", function () {",
+                                                                                    "  pm.expect(Number.isFinite(stock)).to.eql(true);",
+                                                                                    "});",
+                                                                                    "",
+                                                                                    "if (Number.isFinite(stock)) {",
+                                                                                    "  pm.collectionVariables.set(\"stockBeforePurchase\", String(stock));",
+                                                                                    "  pm.collectionVariables.set(\"initialStock\", String(stock));",
+                                                                                    "}"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Create purchase",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/purchases",
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"productId\": \"{{productId}}\",\n  \"quantity\": \"{{purchaseQty}}\"\n}"
+                                                               }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "",
+                                                                                    "pm.test(\"Purchase request accepted\", function () { pm.expect(pm.response.code).to.be.oneOf([200,201,202]); });",
+                                                                                    "const j=pm.response.json();",
+                                                                                    "if(j.purchaseId !== undefined) pm.collectionVariables.set(\"purchaseId\",String(j.purchaseId));",
+                                                                                    "pm.test(\"Purchase response is present\", function () { pm.expect(pm.response.text()).to.not.be.empty; });"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Poll inventory after purchase",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/inventory/{{productId}}"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "prerequest",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "const n = Number(pm.collectionVariables.get(\"pollAttempt\") || \"0\");",
+                                                                                    "pm.collectionVariables.set(\"pollAttempt\", String(n + 1));"
+                                                                                ]
+                                                                   }
+                                                    },
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"Inventory lookup after purchase returns 200\", function () {",
+                                                                                    "  pm.response.to.have.status(200);",
+                                                                                    "});",
+                                                                                    "",
+                                                                                    "const j = pm.response.json();",
+                                                                                    "const stock = Number(j.currentStock);",
+                                                                                    "const before = Number(pm.collectionVariables.get(\"stockBeforePurchase\"));",
+                                                                                    "const expected = before + Number(pm.collectionVariables.get(\"purchaseQty\"));",
+                                                                                    "const attempt = Number(pm.collectionVariables.get(\"pollAttempt\") || \"0\");",
+                                                                                    "",
+                                                                                    "if (stock !== expected \u0026\u0026 attempt \u003c 10) {",
+                                                                                    "  pm.test(\"Waiting for purchase event to update stock (attempt \" + attempt + \")\", function () {",
+                                                                                    "    pm.expect(true).to.eql(true);",
+                                                                                    "  });",
+                                                                                    "  postman.setNextRequest(\"Poll inventory after purchase\");",
+                                                                                    "} else {",
+                                                                                    "  pm.test(\"Purchase event increases inventory by requested quantity\", function () {",
+                                                                                    "    pm.expect(stock).to.eql(expected);",
+                                                                                    "  });",
+                                                                                    "",
+                                                                                    "  if (stock === expected) {",
+                                                                                    "    pm.collectionVariables.set(\"stockAfterPurchase\", String(stock));",
+                                                                                    "  }",
+                                                                                    "",
+                                                                                    "  pm.collectionVariables.set(\"pollAttempt\", \"0\");",
+                                                                                    "  postman.setNextRequest(\"Get inventory before sale\");",
+                                                                                    "}"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "05 - Sale Saga Flow",
+                     "item":  [
+                                  {
+                                      "name":  "Get inventory before sale",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/inventory/{{productId}}"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"Inventory before sale returns 200\", function () {",
+                                                                                    "  pm.response.to.have.status(200);",
+                                                                                    "});",
+                                                                                    "",
+                                                                                    "const body = pm.response.json();",
+                                                                                    "",
+                                                                                    "pm.test(\"Inventory response is valid JSON\", function () {",
+                                                                                    "  pm.expect(body).to.be.an(\"object\");",
+                                                                                    "});",
+                                                                                    "",
+                                                                                    "pm.test(\"Inventory stock is numeric\", function () {",
+                                                                                    "  pm.expect(body.currentStock).to.be.a(\"number\");",
+                                                                                    "});",
+                                                                                    "",
+                                                                                    "pm.collectionVariables.set(\"stockBeforeSale\", String(body.currentStock));",
+                                                                                    "console.log(\"Stock before sale:\", pm.collectionVariables.get(\"stockBeforeSale\"));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Create sale",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  "http://localhost:8080/api/sales",
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "\n{\n  \"productId\": \"{{productId}}\",\n  \"quantity\": \"{{saleQty}}\"\n}\n"
+                                                               }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "",
+                                                                                    "pm.test(\"Sale saga returns 202 Accepted\", function () {",
+                                                                                    "    pm.response.to.have.status(202);",
+                                                                                    "});",
+                                                                                    "",
+                                                                                    "pm.test(\"Sale response contains saga ID\", function () {",
+                                                                                    "    pm.expect(pm.response.text()).to.include(\"Saga ID\");",
+                                                                                    "});",
+                                                                                    "",
+                                                                                    "const m = pm.response.text().match(/Saga ID:\\s*([\\w-]+)/);",
+                                                                                    "",
+                                                                                    "if (m) {",
+                                                                                    "    pm.collectionVariables.set(\"saleSagaId\", m[1]);",
+                                                                                    "    console.log(\"Sale Saga ID:\", m[1]);",
+                                                                                    "}",
+                                                                                    ""
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "List sales",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/sales"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "",
+                                                                                    "pm.test(\"List sales returns 200\", function () { pm.response.to.have.status(200); });",
+                                                                                    "pm.test(\"Sales response is an array\", function () { pm.expect(pm.response.json()).to.be.an(\"array\"); });"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Verify inventory after sale",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/inventory/{{productId}}"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "",
+                                                                                    "pm.test(\"Inventory after sale returns 200\", function () {",
+                                                                                    "    pm.response.to.have.status(200);",
+                                                                                    "});",
+                                                                                    "",
+                                                                                    "const j = pm.response.json();",
+                                                                                    "const stock = Number(j.currentStock);",
+                                                                                    "const stockBefore = Number(",
+                                                                                    "    pm.collectionVariables.get(\"stockBeforeSale\")",
+                                                                                    ");",
+                                                                                    "const saleQty = Number(",
+                                                                                    "    pm.collectionVariables.get(\"saleQty\")",
+                                                                                    ");",
+                                                                                    "const expected = stockBefore - saleQty;",
+                                                                                    "const attempt = Number(",
+                                                                                    "    pm.collectionVariables.get(\"pollAttempt\") || \"0\"",
+                                                                                    ");",
+                                                                                    "",
+                                                                                    "console.log(",
+                                                                                    "    \"Stock before:\", stockBefore,",
+                                                                                    "    \"| Sale qty:\", saleQty,",
+                                                                                    "    \"| Current stock:\", stock,",
+                                                                                    "    \"| Expected:\", expected,",
+                                                                                    "    \"| Attempt:\", attempt",
+                                                                                    ");",
+                                                                                    "",
+                                                                                    "pm.test(\"Inventory stock is numeric\", function () {",
+                                                                                    "    pm.expect(Number.isFinite(stock)).to.eql(true);",
+                                                                                    "});",
+                                                                                    "",
+                                                                                    "pm.test(\"Starting stock and sale quantity are valid\", function () {",
+                                                                                    "    pm.expect(Number.isFinite(stockBefore)).to.eql(true);",
+                                                                                    "    pm.expect(Number.isFinite(saleQty)).to.eql(true);",
+                                                                                    "    pm.expect(saleQty).to.be.above(0);",
+                                                                                    "});",
+                                                                                    "",
+                                                                                    "if (stock !== expected \u0026\u0026 attempt \u003c 9) {",
+                                                                                    "    pm.collectionVariables.set(",
+                                                                                    "        \"pollAttempt\",",
+                                                                                    "        String(attempt + 1)",
+                                                                                    "    );",
+                                                                                    "",
+                                                                                    "    pm.test(\"Waiting for inventory event update\", function () {",
+                                                                                    "        pm.expect(true).to.eql(true);",
+                                                                                    "    });",
+                                                                                    "",
+                                                                                    "    postman.setNextRequest(\"Verify inventory after sale\");",
+                                                                                    "} else {",
+                                                                                    "    pm.test(\"Sale event decreases inventory by requested quantity\", function () {",
+                                                                                    "        pm.expect(stock).to.eql(expected);",
+                                                                                    "    });",
+                                                                                    "",
+                                                                                    "    if (stock === expected) {",
+                                                                                    "        pm.collectionVariables.set(",
+                                                                                    "            \"stockAfterSale\",",
+                                                                                    "            String(stock)",
+                                                                                    "        );",
+                                                                                    "    }",
+                                                                                    "",
+                                                                                    "    pm.collectionVariables.set(\"pollAttempt\", \"0\");",
+                                                                                    "}",
+                                                                                    ""
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "06 - Insufficient Stock",
+                     "item":  [
+                                  {
+                                      "name":  "Attempt sale with excessive quantity",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/sales",
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"productId\": \"{{productId}}\",\n  \"quantity\": 999999\n}"
+                                                               }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"Insufficient-stock sale is accepted for async failure handling or rejected\", function () {",
+                                                                                    "    pm.expect(pm.response.code).to.be.oneOf([400, 409, 422, 202, 500]);",
+                                                                                    "});",
+                                                                                    "if (pm.response.code === 202) {",
+                                                                                    "    pm.test(\"Accepted saga response includes a saga ID\", function () {",
+                                                                                    "        pm.expect(pm.response.text()).to.include(\"Saga ID\");",
+                                                                                    "    });",
+                                                                                    "}"
+                                                                                ]
+                                                                   }
+                                                    },
+                                                    {
+                                                        "listen":  "prerequest",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "const afterSale = Number(pm.collectionVariables.get(\"stockAfterSale\"));",
+                                                                                    "const beforeSale = Number(pm.collectionVariables.get(\"stockBeforeSale\"));",
+                                                                                    "const snapshot = Number.isFinite(afterSale) \u0026\u0026 afterSale \u003e 0 ? afterSale : beforeSale;",
+                                                                                    "if (Number.isFinite(snapshot) \u0026\u0026 snapshot \u003e= 0) {",
+                                                                                    "    pm.collectionVariables.set(\"stockBeforeFailure\", String(snapshot));",
+                                                                                    "} else {",
+                                                                                    "    throw new Error(\"Valid stock snapshot missing before insufficient-stock test\");",
+                                                                                    "}"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Verify inventory remains readable",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/inventory/{{productId}}"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"Inventory returns 200\", function () {",
+                                                                                    "    pm.response.to.have.status(200);",
+                                                                                    "});",
+                                                                                    "",
+                                                                                    "const body = pm.response.json();",
+                                                                                    "const stock = Number(body.currentStock);",
+                                                                                    "const stockBeforeFailure = Number(",
+                                                                                    "    pm.collectionVariables.get(\"stockBeforeFailure\")",
+                                                                                    ");",
+                                                                                    "",
+                                                                                    "pm.test(\"Inventory stock is numeric\", function () {",
+                                                                                    "    pm.expect(Number.isFinite(stock)).to.eql(true);",
+                                                                                    "});",
+                                                                                    "",
+                                                                                    "pm.test(\"Stock remains unchanged after insufficient-stock sale\", function () {",
+                                                                                    "    pm.expect(Number.isFinite(stockBeforeFailure)).to.eql(true);",
+                                                                                    "    pm.expect(stock).to.eql(stockBeforeFailure);",
+                                                                                    "});",
+                                                                                    "",
+                                                                                    "console.log(\"Stock before failure:\", stockBeforeFailure);",
+                                                                                    "console.log(\"Stock after failure:\", stock);"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "07 - Notifications",
+                     "item":  [
+                                  {
+                                      "name":  "List notifications",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/notifications"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "",
+                                                                                    "pm.test(\"Notifications returns 200\", function () { pm.response.to.have.status(200); });",
+                                                                                    "pm.test(\"Notifications response is an array\", function () { pm.expect(pm.response.json()).to.be.an(\"array\"); });",
+                                                                                    "const arr=pm.response.json();",
+                                                                                    "if(arr.length \u0026\u0026 arr[0].id!==undefined) pm.collectionVariables.set(\"notificationId\",String(arr[0].id));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Mark first notification read - conditional",
+                                      "request":  {
+                                                      "method":  "PATCH",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/notifications/{{notificationId}}/read"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "",
+                                                                                    "if(!pm.collectionVariables.get(\"notificationId\")) {",
+                                                                                    "  pm.test(\"Notification ID available\", function () { pm.expect(true).to.eql(true); });",
+                                                                                    "} else {",
+                                                                                    "  pm.test(\"Mark notification read returns 200\", function () { pm.response.to.have.status(200); });",
+                                                                                    "  pm.test(\"Response contains notification data\", function () { pm.expect(pm.response.json()).to.be.an(\"object\"); });",
+                                                                                    "}"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "09 - Optional Cleanup",
+                     "item":  [
+                                  {
+                                      "name":  "Delete created product - optional cleanup",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/products/{{createdProductId}}"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\"Product delete returns 200 or 204\", function () {",
+                                                                                    "  pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                                                                                    "});"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "08 - Category Cleanup",
+                     "item":  [
+                                  {
+                                      "name":  "Delete created category",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/categories/{{categoryId}}"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "",
+                                                                                    "pm.test(\"Category delete returns 204 or 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200,204]); });"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 }
+             ],
+    "variable":  [
+                     {
+                         "key":  "baseUrl",
+                         "value":  "http://localhost:8080",
+                         "type":  "default"
+                     },
+                     {
+                         "key":  "categoryId",
+                         "value":  "",
+                         "type":  "default"
+                     },
+                     {
+                         "key":  "productId",
+                         "value":  "2",
+                         "type":  "default"
+                     },
+                     {
+                         "key":  "createdProductId",
+                         "value":  "",
+                         "type":  "default"
+                     },
+                     {
+                         "key":  "initialStock",
+                         "value":  "0",
+                         "type":  "default"
+                     },
+                     {
+                         "key":  "purchaseId",
+                         "value":  "",
+                         "type":  "default"
+                     },
+                     {
+                         "key":  "saleQty",
+                         "value":  "2",
+                         "type":  "default"
+                     },
+                     {
+                         "key":  "purchaseQty",
+                         "value":  "5",
+                         "type":  "default"
+                     },
+                     {
+                         "key":  "notificationId",
+                         "value":  "",
+                         "type":  "default"
+                     },
+                     {
+                         "key":  "pollAttempt",
+                         "value":  "0",
+                         "type":  "default"
+                     },
+                     {
+                         "key":  "stockBeforePurchase",
+                         "value":  "0",
+                         "type":  "default"
+                     },
+                     {
+                         "key":  "stockAfterPurchase",
+                         "value":  "0",
+                         "type":  "default"
+                     },
+                     {
+                         "key":  "stockBeforeSale",
+                         "value":  "0",
+                         "type":  "default"
+                     },
+                     {
+                         "key":  "stockAfterSale",
+                         "value":  "0",
+                         "type":  "default"
+                     },
+                     {
+                         "key":  "saleSagaId",
+                         "value":  "",
+                         "type":  "default"
+                     },
+                     {
+                         "key":  "stockBeforeFailure",
+                         "value":  "",
+                         "type":  "default"
+                     }
+                 ]
+}

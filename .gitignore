@@ -33,3 +33,20 @@ Thumbs.db
 BOOT-INF/
 temp-sale-inspect/
 purchase-docker-build.log
+
+# Day 27 API testing generated files
+node_modules/
+.postman/
+postman/
+inventory-ms-tests-*.bak
+inventory-ms-tests-*.backup.json
+inventory-ms-tests-backup.json
+day27-test-report.json
+inventory-thread-dump.txt
+newman-latest.txt
+product-test-debug.log
+category-error.txt
+sale-failed-messages.json
+effective-pom.xml
+convert-postman.cjs
+
