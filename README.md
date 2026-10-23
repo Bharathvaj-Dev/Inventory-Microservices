@@ -1,187 +1,223 @@
-# Inventory App — Microservices Architecture
+# \# Inventory Microservices
 
-Pure design document. No code yet — this defines service boundaries, data
-ownership, and communication patterns before implementation begins.
+#
 
-## Services
+# A Java Spring Boot microservices application for managing products, categories, inventory, purchases, sales, and notifications. The project uses PostgreSQL databases, Docker Compose, an API Gateway, and asynchronous messaging with AWS SQS/LocalStack.
 
-| Service | Responsibility |
-|---|---|
-| **Product** | Product catalog: SKUs, names, descriptions, categories, list price |
-| **Inventory** | Stock levels per warehouse, reorder thresholds, stock ledger/movements |
-| **Purchase** | Purchase orders (buying stock from suppliers), supplier records |
-| **Sale** | Sales orders (selling stock to customers), customer order history |
-| **Notification** | Delivers alerts/emails from domain events; owns no business data |
+#
 
----
+# \## Architecture
 
-## 1. Data Ownership (Database-per-Service)
+#
 
-Each service owns its data exclusively. No service reaches into another
-service's tables directly — everything crosses a boundary through an API or
-an event.
+# \- \*\*API Gateway:\*\* Single entry point for frontend and API requests.
 
-### Product Service — `product_db`
-- `products` (id, sku, name, description, category_id, unit_price, active, created_at, updated_at)
-- `categories` (id, name, parent_id)
+# \- \*\*Product Service:\*\* Product and category management.
 
-### Inventory Service — `inventory_db`
-- `warehouses` (id, name, location)
-- `stock_levels` (product_id, warehouse_id, quantity_on_hand, quantity_reserved, reorder_threshold)
-- `stock_movements` (id, product_id, warehouse_id, delta, reason, source_event_id, created_at) — audit ledger
+# \- \*\*Inventory Service:\*\* Inventory lookup and low-stock monitoring.
 
-### Purchase Service — `purchase_db`
-- `suppliers` (id, name, contact_info)
-- `purchase_orders` (id, supplier_id, status, created_at)
-- `purchase_order_items` (po_id, product_id, quantity, unit_cost)
+# \- \*\*Purchase Service:\*\* Purchase operations and purchase event publishing.
 
-### Sale Service — `sale_db`
-- `customers` (id, name, contact_info)
-- `sales_orders` (id, customer_id, status, created_at)
-- `sales_order_items` (order_id, product_id, quantity, unit_price)
+# \- \*\*Sale Service:\*\* Sales operations and inventory-related workflow integration.
 
-### Notification Service — `notification_db`
-- `notification_templates` (id, event_type, channel, template_body)
-- `notification_log` (id, event_type, recipient, channel, status, sent_at) — delivery audit only, not source-of-truth business data
+# \- \*\*Notification Service:\*\* Notification retrieval and read-status management.
 
-**Rule of thumb:** if Product Service needs a product's current stock, it
-asks Inventory Service — it never queries `inventory_db` directly. Product
-Service doesn't even know `inventory_db` exists.
+#
 
----
+# Each service owns its application logic and database configuration. Services communicate through HTTP APIs and asynchronous messaging where configured.
 
-## 2. Communication: Sync (HTTP) vs Async (SQS)
+#
 
-### Synchronous — HTTP/REST
-Used only where the calling service needs an immediate answer to make a
-decision *right now* (can't proceed without it).
+# \## Technology Stack
 
-| Caller | Callee | Call | Why sync |
-|---|---|---|---|
-| Sale Service | Product Service | `GET /products/{id}` | Needs current price/details to build the order line item |
-| Sale Service | Inventory Service | `GET /inventory/{productId}/availability?warehouseId=` | Must confirm stock is available *before* committing the order — prevents overselling |
-| Purchase Service | Product Service | `GET /products/{id}` | Validates the product exists before adding it to a PO line item |
+#
 
-### Asynchronous — SQS (event-driven)
-Used for everything that changes state as a *side effect* of something that
-already happened. The publishing service doesn't wait, and doesn't care who
-(if anyone) is listening.
+# \- Java and Spring Boot
 
-| Publisher | Event | Consumer(s) | Effect |
-|---|---|---|---|
-| Purchase Service | `PurchaseOrderReceived` | Inventory Service | Increases `quantity_on_hand` |
-| Purchase Service | `PurchaseOrderCreated` | Notification Service | Notifies procurement/supplier |
-| Sale Service | `SaleOrderConfirmed` | Inventory Service | Decreases `quantity_on_hand` / releases reservation |
-| Sale Service | `SaleOrderConfirmed` | Notification Service | Sends order confirmation to customer |
-| Sale Service | `SaleOrderFailed` | Notification Service | Sends failure notice (e.g. stock ran out mid-checkout) |
-| Inventory Service | `LowStockDetected` | Notification Service | Alerts procurement team to reorder |
+# \- Maven
 
-**Why the split:** the *check* before committing an order is sync because
-the outcome changes the business decision immediately (don't sell what you
-don't have). The *update* after committing is async because Sale and
-Purchase don't need to block on Inventory's write succeeding — it's fine if
-the stock ledger catches up a second later. This also means Inventory being
-briefly slow or restarting doesn't take down checkout.
+# \- PostgreSQL
 
-> **Note on fan-out:** `SaleOrderConfirmed` has two consumers (Inventory and
-> Notification). Plain SQS is one-queue-one-consumer, so in practice this
-> is implemented as an SNS topic with one SQS queue per subscriber
-> (SNS → SQS fan-out), not one queue read by two services.
+# \- Spring Cloud Gateway and OpenFeign
 
----
+# \- AWS SQS / LocalStack
 
-## 3. Databases
+# \- Docker and Docker Compose
 
-| # | Database | Owner | Engine |
-|---|---|---|---|
-| 1 | `product_db` | Product Service | PostgreSQL |
-| 2 | `inventory_db` | Inventory Service | PostgreSQL |
-| 3 | `purchase_db` | Purchase Service | PostgreSQL |
-| 4 | `sale_db` | Sale Service | PostgreSQL |
-| 5 | `notification_db` | Notification Service | PostgreSQL (small — audit log only) |
+# \- React and Vite frontend
 
-Plus infrastructure (not a service database, but shared plumbing):
-- **Message broker:** AWS SQS (+ SNS for fan-out topics)
-- **API Gateway:** single entry point for external/client HTTP traffic, routes to the 5 services
+# \- Postman / Newman API testing
 
----
+#
 
-## 4. Architecture Diagram
+# \## Service Ports
 
-```mermaid
-flowchart TB
-    Client[Client / Frontend]
-    GW[API Gateway]
+#
 
-    Client --> GW
+# | Component | Local Port |
 
-    GW --> Product[Product Service]
-    GW --> Inventory[Inventory Service]
-    GW --> Purchase[Purchase Service]
-    GW --> Sale[Sale Service]
+# |---|---:|
 
-    Product --- ProductDB[(product_db)]
-    Inventory --- InventoryDB[(inventory_db)]
-    Purchase --- PurchaseDB[(purchase_db)]
-    Sale --- SaleDB[(sale_db)]
-    Notification[Notification Service] --- NotificationDB[(notification_db)]
+# | API Gateway | 8080 |
 
-    %% Sync HTTP calls
-    Sale -- "HTTP GET /products/:id" --> Product
-    Sale -- "HTTP GET /inventory/:id/availability" --> Inventory
-    Purchase -- "HTTP GET /products/:id" --> Product
+# | Product Service | 8081 |
 
-    %% Async via SQS/SNS
-    Purchase -. "PurchaseOrderReceived" .-> SQS1[/SQS: inventory-events/]
-    SQS1 -. consumes .-> Inventory
+# | Inventory Service | 8082 |
 
-    Sale -. "SaleOrderConfirmed" .-> SNS1{{SNS: order-events}}
-    SNS1 -. "SQS: inventory-order-queue" .-> Inventory
-    SNS1 -. "SQS: notification-order-queue" .-> Notification
+# | Purchase Service | 8083 |
 
-    Purchase -. "PurchaseOrderCreated" .-> SQS2[/SQS: notification-events/]
-    SQS2 -. consumes .-> Notification
+# | Sale Service | 8084 |
 
-    Inventory -. "LowStockDetected" .-> SQS3[/SQS: notification-events/]
-    SQS3 -. consumes .-> Notification
+# | Notification Service | 8085 |
 
-    Sale -. "SaleOrderFailed" .-> SQS2
+# | Frontend (Vite) | 5173 |
 
-    style ProductDB fill:#e8f0fe
-    style InventoryDB fill:#e8f0fe
-    style PurchaseDB fill:#e8f0fe
-    style SaleDB fill:#e8f0fe
-    style NotificationDB fill:#e8f0fe
-```
+#
 
-Solid arrows = synchronous HTTP calls (blocking, need an answer now).
-Dashed arrows = asynchronous events over SQS/SNS (fire-and-forget, eventual
-consistency).
+# \## API Documentation
 
----
+#
 
-## 5. Design Rationale Summary
+# See \[API Documentation](docs/API-DOCUMENTATION.md) for the currently documented routes.
 
-- **Database-per-service** keeps each team/service free to change its
-  schema without coordinating a migration across the whole system, and
-  makes the ownership boundary unambiguous — if you need data you don't
-  own, you call an API or listen for an event, you never query another
-  service's tables.
-- **Sync HTTP is reserved for decisions**, not updates. The only two
-  services callable synchronously by others are Product (read-only lookup)
-  and Inventory (availability check) — both are simple reads with no side
-  effects on the callee.
-- **Async SQS is reserved for consequences.** Anything that happens
-  *because* an order was placed or received is published as an event and
-  handled independently, so a slow or temporarily-down consumer (e.g.
-  Notification) never blocks a purchase or sale from completing.
-- **Notification Service owns no business data.** It's a pure event
-  consumer/dispatcher with only an audit log — it can be added, removed, or
-  rebuilt without any other service knowing.
+#
 
-## Next Steps (not in this document)
+# Base URL through the API Gateway:
 
-- API contracts (OpenAPI specs) for the three sync endpoints
-- Event schemas (JSON) for the six async events, with versioning strategy
-- Retry/DLQ policy per SQS queue
-- Service discovery / API Gateway routing config
+#
+
+# `http://localhost:8080`
+
+#
+
+# \### Main endpoints
+
+#
+
+# | Area | Endpoints |
+
+# |---|---|
+
+# | Products | `/api/products` |
+
+# | Categories | `/api/categories` |
+
+# | Inventory | `/api/inventory` |
+
+# | Purchases | `/api/purchases` |
+
+# | Sales | `/api/sales` |
+
+# | Notifications | `/api/notifications` |
+
+# | Gateway health | `/gateway/health` |
+
+#
+
+# Consult the API reference and controller source for supported HTTP methods and request details.
+
+#
+
+# \## Configuration
+
+#
+
+# 1\. Review `.env.example` and provide values required by your environment.
+
+# 2\. Keep real credentials in local environment files; do not commit secrets.
+
+# 3\. Review `docker-compose.yml` and service configuration before starting the application.
+
+#
+
+# \## Run with Docker Compose
+
+#
+
+# From the repository root:
+
+#
+
+# ```bash
+
+# docker compose --env-file .env.docker config --quiet
+
+# docker compose --env-file .env.docker up -d --build
+
+# docker compose --env-file .env.docker ps
+
+# ```
+
+#
+
+# To inspect logs for a service:
+
+#
+
+# ```bash
+
+# docker compose --env-file .env.docker logs --tail=100 api-gateway
+
+# ```
+
+#
+
+# Stop containers without deleting database volumes:
+
+#
+
+# ```bash
+
+# docker compose --env-file .env.docker down
+
+# ```
+
+#
+
+# Do not use `down -v` unless you intentionally want to remove persistent volumes.
+
+#
+
+# \## Frontend
+
+#
+
+# ```bash
+
+# cd frontend
+
+# npm install
+
+# npm run dev
+
+# ```
+
+#
+
+# Open `http://localhost:5173`. Ensure the backend services and API Gateway are running.
+
+#
+
+# \## API Testing
+
+#
+
+# Use the Postman collections in the repository to validate endpoints through `http://localhost:8080`. Check response status codes, response bodies, and the relevant business workflow. Newman can be used for command-line collection execution when installed.
+
+#
+
+# \## Observability
+
+#
+
+# The Docker Compose environment includes observability components. Check `docker-compose.yml` for the configured services and ports.
+
+#
+
+# \## Project Status
+
+#
+
+# This repository contains the implementation and testing artifacts for the Inventory Microservices project. Actual API availability depends on the running service configuration and dependencies.
+
+#
