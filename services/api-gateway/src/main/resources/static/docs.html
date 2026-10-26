@@ -1,0 +1,169 @@
+html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Microservices | API Catalog</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f4f7fb;
+            color: #172033;
+        }
+
+        header {
+            background: #14213d;
+            color: white;
+            padding: 32px 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            margin: 0 0 10px;
+        }
+
+        header p {
+            margin: 0;
+            color: #dbe5f5;
+        }
+
+        main {
+            max-width: 1050px;
+            margin: 30px auto;
+            padding: 0 18px;
+        }
+
+        .section-title {
+            margin: 28px 0 16px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 18px;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid #dce3ed;
+            border-radius: 12px;
+            padding: 22px;
+            box-shadow: 0 3px 12px rgba(20, 33, 61, 0.05);
+        }
+
+        .card h3 {
+            margin-top: 0;
+        }
+
+        .card p {
+            color: #5c667a;
+            line-height: 1.5;
+        }
+
+        .port {
+            display: inline-block;
+            background: #e8efff;
+            color: #214eb0;
+            padding: 5px 9px;
+            border-radius: 5px;
+            font-size: 13px;
+        }
+
+        a {
+            display: inline-block;
+            margin: 8px 8px 0 0;
+            color: #1758c5;
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .health {
+            border-left: 4px solid #16865c;
+        }
+
+        footer {
+            text-align: center;
+            padding: 25px;
+            color: #667085;
+            font-size: 13px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Inventory Microservices API Catalog</h1>
+        <p>Central documentation links for the Inventory Management Platform</p>
+    </header>
+
+    <main>
+        <h2 class="section-title">API Documentation</h2>
+        <div class="grid">
+            <section class="card">
+                <h3>Product Service</h3>
+                <span class="port">Port 8081</span>
+                <p>Manage products and product categories.</p>
+                <a href="http://localhost:8081/swagger-ui.html" target="_blank" rel="noopener">Swagger UI</a>
+                <a href="http://localhost:8081/v3/api-docs" target="_blank" rel="noopener">OpenAPI JSON</a>
+            </section>
+
+            <section class="card">
+                <h3>Inventory Service</h3>
+                <span class="port">Port 8082</span>
+                <p>View stock levels and identify low-stock items.</p>
+                <a href="http://localhost:8082/swagger-ui.html" target="_blank" rel="noopener">Swagger UI</a>
+                <a href="http://localhost:8082/v3/api-docs" target="_blank" rel="noopener">OpenAPI JSON</a>
+            </section>
+
+            <section class="card">
+                <h3>Purchase Service</h3>
+                <span class="port">Port 8083</span>
+                <p>Create purchase requests and view purchase records.</p>
+                <a href="http://localhost:8083/swagger-ui.html" target="_blank" rel="noopener">Swagger UI</a>
+                <a href="http://localhost:8083/v3/api-docs" target="_blank" rel="noopener">OpenAPI JSON</a>
+            </section>
+
+            <section class="card">
+                <h3>Sale Service</h3>
+                <span class="port">Port 8084</span>
+                <p>Start sale sagas and retrieve sales records.</p>
+                <a href="http://localhost:8084/swagger-ui.html" target="_blank" rel="noopener">Swagger UI</a>
+                <a href="http://localhost:8084/v3/api-docs" target="_blank" rel="noopener">OpenAPI JSON</a>
+            </section>
+
+            <section class="card">
+                <h3>Notification Service</h3>
+                <span class="port">Port 8085</span>
+                <p>Retrieve notifications and mark alerts as read.</p>
+                <a href="http://localhost:8085/swagger-ui.html" target="_blank" rel="noopener">Swagger UI</a>
+                <a href="http://localhost:8085/v3/api-docs" target="_blank" rel="noopener">OpenAPI JSON</a>
+            </section>
+
+            <section class="card health">
+                <h3>API Gateway</h3>
+                <span class="port">Port 8080</span>
+                <p>Check the health status of the gateway's downstream services.</p>
+                <a href="/gateway/health" target="_blank" rel="noopener">Gateway Health</a>
+                <a href="/swagger-ui.html" target="_blank" rel="noopener">Gateway Swagger UI</a>
+                <a href="/v3/api-docs" target="_blank" rel="noopener">Gateway OpenAPI JSON</a>
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        Inventory Microservices &middot; API Catalog
+    </footer>
+</body>
+
+</html>

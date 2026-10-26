@@ -82,12 +82,12 @@ springdoc:
     path: /swagger-ui.html
     urls:
       - name: Product Service
-        url: ${PRODUCT_SERVICE_URL:http://localhost:8081}/v3/api-docs
+        url: http://localhost:8081/v3/api-docs
       - name: Inventory Service
-        url: ${INVENTORY_SERVICE_URL:http://localhost:8082}/v3/api-docs
+        url: http://localhost:8082/v3/api-docs
       - name: Purchase Service
-        url: ${PURCHASE_SERVICE_URL:http://localhost:8083}/v3/api-docs
+        url: http://localhost:8083/v3/api-docs
       - name: Sale Service
-        url: ${SALE_SERVICE_URL:http://localhost:8084}/v3/api-docs
+        url: http://localhost:8084/v3/api-docs
       - name: Notification Service
-        url: ${NOTIFICATION_SERVICE_URL:http://localhost:8085}/v3/api-docs
+        url: http://localhost:8085/v3/api-docs

@@ -1,8 +1,11 @@
+
 package inventory.product.service;
 
 import java.util.List;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import inventory.product.entity.Category;
 import inventory.product.repository.CategoryRepository;
@@ -22,7 +25,9 @@ public class CategoryService {
 
     public Category getCategoryById(Long id) {
         return categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Category not found with id: " + id));
     }
 
     public Category createCategory(Category category) {

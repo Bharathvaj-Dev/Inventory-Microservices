@@ -43,16 +43,6 @@ public class InventoryService {
 
 
     public InventoryItem getInventoryByProductId(Long productId) {
-
-        // TEMPORARY: Day 19 TimeLimiter test
-        try {
-            Thread.sleep(6000);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException(
-                    "Inventory request interrupted", e);
-        }
-
         InventoryItem item = inventoryItemRepository.findAll()
                 .stream()
                 .filter(i -> i.getProductId().equals(productId))
@@ -62,8 +52,14 @@ public class InventoryService {
                                 "Inventory not found for productId: "
                                         + productId));
 
-        // Call Product Service for distributed tracing
-        productFeignClient.getProductById(productId);
+        // Call Product Service for distributed tracing (best-effort, non-blocking)
+        try {
+            productFeignClient.getProductById(productId);
+        } catch (Exception e) {
+            System.out.println(
+                    "Warning: Could not reach Product Service for tracing (productId: "
+                            + productId + "): " + e.getMessage());
+        }
 
         return item;
     }
