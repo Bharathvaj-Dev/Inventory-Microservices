@@ -1,223 +1,180 @@
-# \# Inventory Microservices
+# Inventory Microservices
+
+A Java Spring Boot microservices application with PostgreSQL, Spring Cloud Gateway, asynchronous messaging using LocalStack/SQS, and a React frontend.
+
+## Architecture
+
+```mermaid
+flowchart TD
+    Client["React Frontend :5173"] --> Gateway["API Gateway :8080"]
+    Gateway --> Product["Product Service :8081"]
+    Gateway --> Inventory["Inventory Service :8082"]
+    Gateway --> Purchase["Purchase Service :8083"]
+    Gateway --> Sale["Sale Service :8084"]
+    Gateway --> Notification["Notification Service :8085"]
+
+    Product --> ProductDB[("product_db")]
+    Inventory --> InventoryDB[("inventory_db")]
+    Purchase --> PurchaseDB[("purchase_db")]
+    Sale --> SaleDB[("sale_db")]
+    Notification --> NotificationDB[("notification_db")]
+
+    Purchase -. "Events / SQS" .-> LocalStack["LocalStack :4566"]
+    Sale -. "Events / SQS" .-> LocalStack
+    LocalStack -. "Messages" .-> Inventory
+    LocalStack -. "Messages" .-> Notification
+```
+
+Each service owns its database. Clients access backend APIs through the API Gateway.
+
+## Technology Stack
+
+- **Backend:** Java, Spring Boot, Spring Cloud Gateway, OpenFeign
+- **Persistence:** Spring Data JPA, Hibernate, PostgreSQL
+- **Messaging:** AWS SQS-compatible LocalStack
+- **Frontend:** React, Vite, JavaScript
+- **Testing:** Postman, Newman
+- **Observability:** Prometheus, Grafana, Loki, Promtail, Jaeger
+- **Build and version control:** Maven Wrapper, Docker Compose, Git
+
+## Services and Ports
+
+| Component | Port | Documentation |
+|---|---:|---|
+| API Gateway | 8080 | [API Catalog](http://localhost:8080/docs) |
+| Product Service | 8081 | [Swagger UI](http://localhost:8081/swagger-ui.html) |
+| Inventory Service | 8082 | [Swagger UI](http://localhost:8082/swagger-ui.html) |
+| Purchase Service | 8083 | [Swagger UI](http://localhost:8083/swagger-ui.html) |
+| Sale Service | 8084 | [Swagger UI](http://localhost:8084/swagger-ui.html) |
+| Notification Service | 8085 | [Swagger UI](http://localhost:8085/swagger-ui.html) |
+| Frontend | 5173 | React/Vite development server |
+| PostgreSQL | 5433 | Local host port |
+| LocalStack | 4566 | Local AWS-compatible services |
+| Prometheus | 9090 | Metrics |
+| Grafana | 3000 | Dashboards |
+| Jaeger | 16686 | Traces |
+| Loki | 3100 | Log aggregation |
+
+## API Documentation
+
+- [API Catalog](http://localhost:8080/docs)
+- [OpenAPI JSON - Gateway](http://localhost:8080/v3/api-docs)
+- Detailed endpoint list: [docs/API-DOCUMENTATION.md](docs/API-DOCUMENTATION.md)
+
+Each service also exposes its own OpenAPI specification at `/v3/api-docs`.
+
+## Prerequisites
+
+- Docker Desktop with Docker Compose
+- Node.js and npm for frontend development
+- Git
+- A Java/Maven installation is optional for container-based startup; use the repository Maven Wrapper for local builds.
+
+## Configuration
+
+1. Review `.env.example` for the required environment variables.
+2. Create or review your local `.env.docker` file using your own local values.
+3. Never commit real passwords, access keys, or other secrets.
+
+### Environment Variables
+
+| Variable | Purpose |
+|---|---|
+| `POSTGRES_USER` | PostgreSQL username |
+| `POSTGRES_PASSWORD` | PostgreSQL password |
+| `PRODUCT_DB` | Product service database |
+| `INVENTORY_DB` | Inventory service database |
+| `PURCHASE_DB` | Purchase service database |
+| `SALE_DB` | Sale service database |
+| `NOTIFICATION_DB` | Notification service database |
+| `PRODUCT_SERVICE_URL` | Product service internal URL |
+| `INVENTORY_SERVICE_URL` | Inventory service internal URL |
+| `PURCHASE_SERVICE_URL` | Purchase service internal URL |
+| `SALE_SERVICE_URL` | Sale service internal URL |
+| `NOTIFICATION_SERVICE_URL` | Notification service internal URL |
+| `AWS_REGION` | AWS-compatible region |
+| `AWS_ACCESS_KEY_ID` | Local AWS-compatible access key |
+| `AWS_SECRET_ACCESS_KEY` | Local AWS-compatible secret key |
+| `AWS_ENDPOINT_URL` | LocalStack endpoint |
+| `AWS_ENDPOINT_URL_SQS` | LocalStack SQS endpoint |
+| `SQS_ENDPOINT_STRATEGY` | SQS endpoint addressing strategy |
+| `SQS_LISTENER_AUTO_STARTUP` | Controls SQS listener startup |
+| `PURCHASE_EVENTS_QUEUE` | Purchase events queue |
+| `STOCK_RESERVATION_REQUESTS_QUEUE` | Stock reservation request queue |
+| `SALE_EVENTS_QUEUE` | Sale events queue |
+| `STOCK_RESERVED_QUEUE` | Successful stock reservation queue |
+| `STOCK_INSUFFICIENT_QUEUE` | Insufficient-stock queue |
+| `LOW_STOCK_ALERTS_QUEUE` | Low-stock alerts queue |
+| `FRONTEND_ORIGIN` | Primary frontend CORS origin |
+| `FRONTEND_ORIGIN_ALT` | Alternate frontend CORS origin |
 
-#
+The exact values depend on the local environment. Refer to `.env.example` and `docker-compose.yml`.
 
-# A Java Spring Boot microservices application for managing products, categories, inventory, purchases, sales, and notifications. The project uses PostgreSQL databases, Docker Compose, an API Gateway, and asynchronous messaging with AWS SQS/LocalStack.
+## Start the Application
 
-#
+Run these commands from the repository root in a terminal:
 
-# \## Architecture
+```cmd
+docker compose --env-file .env.docker config --quiet
+docker compose --env-file .env.docker up -d --build
+docker compose --env-file .env.docker ps
+```
 
-#
+If a service is unhealthy or unavailable, inspect its logs:
 
-# \- \*\*API Gateway:\*\* Single entry point for frontend and API requests.
+```cmd
+docker compose --env-file .env.docker logs --tail=100 api-gateway
+docker compose --env-file .env.docker logs --tail=100 product-service
+docker compose --env-file .env.docker logs --tail=100 inventory-service
+```
 
-# \- \*\*Product Service:\*\* Product and category management.
+Open the API catalog at http://localhost:8080/docs.
 
-# \- \*\*Inventory Service:\*\* Inventory lookup and low-stock monitoring.
+To stop the containers without deleting persistent data:
 
-# \- \*\*Purchase Service:\*\* Purchase operations and purchase event publishing.
+```cmd
+docker compose --env-file .env.docker down
+```
 
-# \- \*\*Sale Service:\*\* Sales operations and inventory-related workflow integration.
+Do not use `down -v` unless you intentionally want to remove persistent volumes and their data.
 
-# \- \*\*Notification Service:\*\* Notification retrieval and read-status management.
+## Run the Frontend
 
-#
+```cmd
+cd frontend
+npm install
+npm run dev
+```
 
-# Each service owns its application logic and database configuration. Services communicate through HTTP APIs and asynchronous messaging where configured.
+Open http://localhost:5173.
 
-#
+## Testing
 
-# \## Technology Stack
+Use the Postman collection in the repository to test APIs through the gateway at `http://localhost:8080`. Newman can run an exported collection with:
 
-#
+```cmd
+npx newman run inventory-ms-tests.json
+```
 
-# \- Java and Spring Boot
+Use the actual collection filename present in your working directory.
 
-# \- Maven
+## Observability
 
-# \- PostgreSQL
+When the corresponding Compose services are running:
 
-# \- Spring Cloud Gateway and OpenFeign
+- Prometheus: http://localhost:9090
+- Grafana: http://localhost:3000
+- Jaeger: http://localhost:16686
 
-# \- AWS SQS / LocalStack
+Loki and Promtail provide log aggregation and forwarding.
 
-# \- Docker and Docker Compose
+## Repository Documentation
 
-# \- React and Vite frontend
-
-# \- Postman / Newman API testing
-
-#
-
-# \## Service Ports
-
-#
-
-# | Component | Local Port |
-
-# |---|---:|
-
-# | API Gateway | 8080 |
-
-# | Product Service | 8081 |
-
-# | Inventory Service | 8082 |
-
-# | Purchase Service | 8083 |
-
-# | Sale Service | 8084 |
-
-# | Notification Service | 8085 |
-
-# | Frontend (Vite) | 5173 |
-
-#
-
-# \## API Documentation
-
-#
-
-# See \[API Documentation](docs/API-DOCUMENTATION.md) for the currently documented routes.
-
-#
-
-# Base URL through the API Gateway:
-
-#
-
-# `http://localhost:8080`
-
-#
-
-# \### Main endpoints
-
-#
-
-# | Area | Endpoints |
-
-# |---|---|
-
-# | Products | `/api/products` |
-
-# | Categories | `/api/categories` |
-
-# | Inventory | `/api/inventory` |
-
-# | Purchases | `/api/purchases` |
-
-# | Sales | `/api/sales` |
-
-# | Notifications | `/api/notifications` |
-
-# | Gateway health | `/gateway/health` |
-
-#
-
-# Consult the API reference and controller source for supported HTTP methods and request details.
-
-#
-
-# \## Configuration
-
-#
-
-# 1\. Review `.env.example` and provide values required by your environment.
-
-# 2\. Keep real credentials in local environment files; do not commit secrets.
-
-# 3\. Review `docker-compose.yml` and service configuration before starting the application.
-
-#
-
-# \## Run with Docker Compose
-
-#
-
-# From the repository root:
-
-#
-
-# ```bash
-
-# docker compose --env-file .env.docker config --quiet
-
-# docker compose --env-file .env.docker up -d --build
-
-# docker compose --env-file .env.docker ps
-
-# ```
-
-#
-
-# To inspect logs for a service:
-
-#
-
-# ```bash
-
-# docker compose --env-file .env.docker logs --tail=100 api-gateway
-
-# ```
-
-#
-
-# Stop containers without deleting database volumes:
-
-#
-
-# ```bash
-
-# docker compose --env-file .env.docker down
-
-# ```
-
-#
-
-# Do not use `down -v` unless you intentionally want to remove persistent volumes.
-
-#
-
-# \## Frontend
-
-#
-
-# ```bash
-
-# cd frontend
-
-# npm install
-
-# npm run dev
-
-# ```
-
-#
-
-# Open `http://localhost:5173`. Ensure the backend services and API Gateway are running.
-
-#
-
-# \## API Testing
-
-#
-
-# Use the Postman collections in the repository to validate endpoints through `http://localhost:8080`. Check response status codes, response bodies, and the relevant business workflow. Newman can be used for command-line collection execution when installed.
-
-#
-
-# \## Observability
-
-#
-
-# The Docker Compose environment includes observability components. Check `docker-compose.yml` for the configured services and ports.
-
-#
-
-# \## Project Status
-
-#
-
-# This repository contains the implementation and testing artifacts for the Inventory Microservices project. Actual API availability depends on the running service configuration and dependencies.
-
-#
+- [API Documentation](docs/API-DOCUMENTATION.md)
+- [Frontend README](frontend/README.md)
+- [API Gateway README](services/api-gateway/README.md)
+- [Product Service README](services/product-service/README.md)
+- [Inventory Service README](services/inventory-service/README.md)
+- [Purchase Service README](services/purchase-service/README.md)
+- [Sale Service README](services/sale-service/README.md)
+- [Notification Service README](services/notification-service/README.md)
