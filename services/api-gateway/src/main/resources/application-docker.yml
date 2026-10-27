@@ -1,0 +1,14 @@
+health:
+  services:
+    product-url: http://product-service:8081/actuator/health
+    inventory-url: http://inventory-service:8082/actuator/health
+    purchase-url: http://purchase-service:8083/actuator/health
+    sale-url: http://sale-service:8084/actuator/health
+    notification-url: http://notification-service:8085/actuator/health
+
+aws:
+  sqs:
+    endpoint: ${AWS_SQS_ENDPOINT:http://localstack:4566}
+    region: ${AWS_REGION:us-east-1}
+    access-key: ${AWS_ACCESS_KEY_ID:test}
+    secret-key: ${AWS_SECRET_ACCESS_KEY:test}
