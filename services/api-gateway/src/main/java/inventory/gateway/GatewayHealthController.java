@@ -1,5 +1,7 @@
+
 package inventory.gateway;
 
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -35,8 +37,7 @@ public class GatewayHealthController {
     private String notificationHealthUrl;
 
     @GetMapping("/gateway/health")
-    @Operation(summary = "Check gateway and service health",
-            description = "Checks the health status of all five microservices")
+    @Operation(summary = "Check gateway and service health", description = "Checks the health status of all five microservices")
     @ApiResponse(responseCode = "200", description = "Health status retrieved")
     public Mono<Map<String, Object>> gatewayHealth() {
 
@@ -71,6 +72,7 @@ public class GatewayHealthController {
                 .uri(url)
                 .retrieve()
                 .bodyToMono(Map.class)
+                .timeout(Duration.ofSeconds(10))
                 .map(health -> {
                     Map<String, Object> result = new LinkedHashMap<>();
                     if (health != null && health.get("status") != null) {

@@ -1,11 +1,13 @@
+
 package inventory.notification.consumer;
 
 import org.springframework.stereotype.Component;
 
+import com.inventory.events.SaleFailed;
+
 import inventory.notification.entity.Alert;
 import inventory.notification.event.LowStockAlert;
 import inventory.notification.service.NotificationService;
-
 import io.awspring.cloud.sqs.annotation.SqsListener;
 
 @Component
@@ -26,8 +28,9 @@ public class NotificationEventListener {
                 "Low stock alert. Current stock: "
                         + event.getCurrentStock(),
                 false,
-                event.getTimestamp()
-        );
+                event.getTimestamp());
+
+        alert.setEventId(event.getEventId());
 
         notificationService.saveAlert(alert);
 
@@ -36,6 +39,30 @@ public class NotificationEventListener {
                         + event.getProductId()
                         + ", Stock: "
                         + event.getCurrentStock()
-        );
+                        + ", Event ID: "
+                        + event.getEventId());
+    }
+
+    @SqsListener("sale-failed")
+    public void handleSaleFailed(SaleFailed event) {
+
+        Alert alert = new Alert(
+                event.getProductId(),
+                "Sale failed. Requested: "
+                        + event.getQuantity()
+                        + ", Available stock: "
+                        + event.getAvailableStock(),
+                false,
+                java.time.LocalDateTime.now());
+
+        alert.setEventId(event.getSagaId());
+
+        notificationService.saveAlert(alert);
+
+        System.out.println(
+                "Sale failure notification received. Saga ID: "
+                        + event.getSagaId()
+                        + ", Product ID: "
+                        + event.getProductId());
     }
 }

@@ -78,7 +78,12 @@
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
-
+ <!-- Shared Inventory Events -->
+<dependency>
+    <groupId>com.inventory</groupId>
+    <artifactId>inventory-events</artifactId>
+    <version>${project.version}</version>
+</dependency>
     </dependencies>
 
     <!-- Spring Boot Maven Plugin -->

@@ -21,7 +21,7 @@ public class SqsHealthIndicator implements HealthIndicator {
     public Health health() {
         try {
             var response = sqsAsyncClient.listQueues()
-                    .get(3, TimeUnit.SECONDS);
+                    .get(15, TimeUnit.SECONDS);
 
             int queueCount = response.queueUrls() == null
                     ? 0

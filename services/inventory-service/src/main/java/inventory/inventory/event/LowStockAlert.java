@@ -1,9 +1,11 @@
+
 package inventory.inventory.event;
 
 import java.time.LocalDateTime;
 
 public class LowStockAlert {
 
+    private String eventId;
     private Long productId;
     private Integer currentStock;
     private LocalDateTime timestamp;
@@ -11,11 +13,21 @@ public class LowStockAlert {
     public LowStockAlert() {
     }
 
-    public LowStockAlert(Long productId, Integer currentStock,
-                         LocalDateTime timestamp) {
+    public LowStockAlert(String eventId, Long productId,
+            Integer currentStock,
+            LocalDateTime timestamp) {
+        this.eventId = eventId;
         this.productId = productId;
         this.currentStock = currentStock;
         this.timestamp = timestamp;
+    }
+
+    public String getEventId() {
+        return eventId;
+    }
+
+    public void setEventId(String eventId) {
+        this.eventId = eventId;
     }
 
     public Long getProductId() {

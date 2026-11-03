@@ -9,6 +9,8 @@ COPY infra/otel/opentelemetry-javaagent.jar /otel/opentelemetry-javaagent.jar
 
 EXPOSE 8084
 
+ENV JAVA_TOOL_OPTIONS="-javaagent:/otel/opentelemetry-javaagent.jar"
+
 ENV OTEL_SERVICE_NAME="sale-service"
 
 ENV OTEL_EXPORTER_OTLP_ENDPOINT="http://jaeger:4317"

@@ -1,3 +1,4 @@
+
 package inventory.notification.entity;
 
 import java.time.LocalDateTime;
@@ -29,11 +30,14 @@ public class Alert {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "event_id", unique = true)
+    private String eventId;
+
     public Alert() {
     }
 
     public Alert(Long productId, String message, Boolean isRead,
-                 LocalDateTime createdAt) {
+            LocalDateTime createdAt) {
         this.productId = productId;
         this.message = message;
         this.isRead = isRead;
@@ -78,5 +82,13 @@ public class Alert {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getEventId() {
+        return eventId;
+    }
+
+    public void setEventId(String eventId) {
+        this.eventId = eventId;
     }
 }

@@ -2,21 +2,30 @@ package inventory.inventory;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.Bean;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 import inventory.inventory.entity.InventoryItem;
 import inventory.inventory.repository.InventoryItemRepository;
 
 @SpringBootApplication
 @EnableFeignClients
+@EnableScheduling
 public class InventoryServiceApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(InventoryServiceApplication.class, args);
+    }
+
+    @Bean
+    ObjectMapper objectMapper() {
+        return new ObjectMapper().findAndRegisterModules();
     }
 
     @Bean

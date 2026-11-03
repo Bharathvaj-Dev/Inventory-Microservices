@@ -6,7 +6,7 @@ spring:
     name: sale-service
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/sale_db}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/sale_db}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:postgres}
 
