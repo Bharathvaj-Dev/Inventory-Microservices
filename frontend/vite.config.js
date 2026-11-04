@@ -6,11 +6,11 @@ export default defineConfig({
   server: {
     proxy: {
       '/gateway': {
-        target: 'http://localhost:18080',
+        target: 'http://localhost:8080',
         changeOrigin: true
       },
       '/api': {
-        target: 'http://localhost:18080',
+        target: 'http://localhost:8080',
         changeOrigin: true
       }
     }
