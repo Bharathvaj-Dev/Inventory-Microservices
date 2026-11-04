@@ -2,12 +2,9 @@ package inventory.inventory.controller;
 
 import java.util.List;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -27,31 +24,47 @@ public class InventoryController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all inventory", description = "Retrieves all inventory items")
+    @Operation(summary = "Get all inventory")
     @ApiResponse(responseCode = "200", description = "Inventory retrieved successfully")
     public ResponseEntity<List<InventoryItem>> getAllInventory() {
         return ResponseEntity.ok(inventoryService.getAllInventory());
     }
 
     @GetMapping("/{productId}")
-    @Operation(summary = "Get inventory by product ID", description = "Retrieves stock details for a specific product")
+    @Operation(summary = "Get inventory by product ID")
     @ApiResponse(responseCode = "200", description = "Inventory retrieved successfully")
     @ApiResponse(responseCode = "404", description = "Inventory item not found")
-    public ResponseEntity<InventoryItem> getInventoryByProductId(
-            @PathVariable Long productId) {
+    public ResponseEntity<InventoryItem> getInventoryByProductId(@PathVariable Long productId) {
+        return ResponseEntity.ok(inventoryService.getInventoryByProductId(productId));
+    }
 
-        return ResponseEntity.ok(
-                inventoryService.getInventoryByProductId(productId));
+    @PostMapping
+    @Operation(summary = "Create inventory item")
+    @ApiResponse(responseCode = "201", description = "Inventory item created")
+    public ResponseEntity<InventoryItem> createInventory(@RequestBody InventoryItem item) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(inventoryService.createInventory(item));
+    }
+
+    @PutMapping("/{productId}")
+    @Operation(summary = "Update inventory stock")
+    @ApiResponse(responseCode = "200", description = "Inventory item updated")
+    public ResponseEntity<InventoryItem> updateInventory(
+            @PathVariable Long productId, @RequestBody InventoryItem item) {
+        return ResponseEntity.ok(inventoryService.updateInventory(productId, item));
+    }
+
+    @DeleteMapping("/{productId}")
+    @Operation(summary = "Delete inventory item")
+    @ApiResponse(responseCode = "204", description = "Inventory item deleted")
+    public ResponseEntity<Void> deleteInventory(@PathVariable Long productId) {
+        inventoryService.deleteInventory(productId);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/low-stock")
-    @Operation(summary = "Get low-stock items", description = "Retrieves inventory items at or below the specified stock threshold")
+    @Operation(summary = "Get low-stock items")
     @ApiResponse(responseCode = "200", description = "Low-stock items retrieved successfully")
-    @ApiResponse(responseCode = "400", description = "Invalid threshold")
-    public ResponseEntity<List<InventoryItem>> getLowStockItems(
-            @RequestParam Integer threshold) {
-
-        return ResponseEntity.ok(
-                inventoryService.getLowStockItems(threshold));
+    public ResponseEntity<List<InventoryItem>> getLowStockItems(@RequestParam Integer threshold) {
+        return ResponseEntity.ok(inventoryService.getLowStockItems(threshold));
     }
 }
