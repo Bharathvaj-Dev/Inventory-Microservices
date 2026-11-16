@@ -21,15 +21,14 @@ public class Product {
 
     private Integer quantity;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id")
-    private Category category;
+    @Column(name = "category_name")
+    private String category;
 
     public Product() {
     }
 
     public Product(String name, String description, BigDecimal price,
-                   Integer quantity, Category category) {
+                   Integer quantity, String category) {
         this.name = name;
         this.description = description;
         this.price = price;
@@ -77,11 +76,11 @@ public class Product {
         this.quantity = quantity;
     }
 
-    public Category getCategory() {
+    public String getCategory() {
         return category;
     }
 
-    public void setCategory(Category category) {
+    public void setCategory(String category) {
         this.category = category;
     }
 }

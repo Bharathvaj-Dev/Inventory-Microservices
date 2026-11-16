@@ -1,28 +1,33 @@
-
 package inventory.product.service;
 
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import inventory.product.entity.Category;
 import inventory.product.entity.Product;
-import inventory.product.repository.CategoryRepository;
 import inventory.product.repository.ProductRepository;
 
 @Service
 public class ProductService {
 
-    private final ProductRepository productRepository;
-    private final CategoryRepository categoryRepository;
+    private static final Set<String> ALLOWED_CATEGORIES = Set.of(
+            "Electronics",
+            "Computers & Laptops",
+            "Mobiles & Accessories",
+            "Home Appliances",
+            "Clothing",
+            "Grocery",
+            "Furniture",
+            "Sports & Fitness"
+    );
 
-    public ProductService(
-            ProductRepository productRepository,
-            CategoryRepository categoryRepository) {
+    private final ProductRepository productRepository;
+
+    public ProductService(ProductRepository productRepository) {
         this.productRepository = productRepository;
-        this.categoryRepository = categoryRepository;
     }
 
     public List<Product> getAllProducts() {
@@ -37,37 +42,30 @@ public class ProductService {
     }
 
     public Product createProduct(Product product) {
-        product.setCategory(resolveCategory(product.getCategory()));
+        validateCategory(product.getCategory());
         return productRepository.save(product);
     }
 
     public Product updateProduct(Long id, Product product) {
         Product existingProduct = getProductById(id);
 
+        validateCategory(product.getCategory());
         existingProduct.setName(product.getName());
         existingProduct.setDescription(product.getDescription());
         existingProduct.setPrice(product.getPrice());
         existingProduct.setQuantity(product.getQuantity());
-        existingProduct.setCategory(resolveCategory(product.getCategory()));
+        existingProduct.setCategory(product.getCategory());
 
         return productRepository.save(existingProduct);
     }
 
-    private Category resolveCategory(Category category) {
-        if (category == null) {
-            return null;
-        }
-
-        if (category.getId() == null) {
+    private void validateCategory(String category) {
+        if (category != null && !category.isBlank()
+                && !ALLOWED_CATEGORIES.contains(category)) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "Category ID is required when assigning a category");
+                    "Invalid category. Choose one of the supported product categories.");
         }
-
-        return categoryRepository.findById(category.getId())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Category not found with id: " + category.getId()));
     }
 
     public void deleteProduct(Long id) {

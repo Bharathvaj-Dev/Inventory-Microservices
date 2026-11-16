@@ -6,11 +6,21 @@ import Navbar from "./components/Navbar";
 import Notifications from "./pages/Notifications";
 import ArchitectureDashboard from "./pages/ArchitectureDashboard";
 
-const EMPTY_FORM = { name: "", description: "", price: "", quantity: "", categoryId: "" };
+const PRODUCT_CATEGORIES = [
+  "Electronics",
+  "Computers & Laptops",
+  "Mobiles & Accessories",
+  "Home Appliances",
+  "Clothing",
+  "Grocery",
+  "Furniture",
+  "Sports & Fitness"
+];
+
+const EMPTY_FORM = { name: "", description: "", price: "", quantity: "", category: "" };
 
 function Products() {
   const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -32,9 +42,6 @@ function Products() {
 
   useEffect(() => {
     loadProducts();
-    apiClient.get("/api/categories")
-      .then((response) => setCategories(Array.isArray(response.data) ? response.data : []))
-      .catch(() => setCategories([]));
   }, [loadProducts]);
 
   function handleChange(event) {
@@ -54,7 +61,7 @@ function Products() {
       description: product.description ?? "",
       price: product.price ?? "",
       quantity: product.quantity ?? "",
-      categoryId: product.category?.id ? String(product.category.id) : "",
+      category: typeof product.category === "string" ? product.category : (product.category?.name ?? ""),
     });
     setSuccess("");
     setError("");
@@ -71,7 +78,7 @@ function Products() {
       description: form.description.trim(),
       price: Number(form.price),
       quantity: Number(form.quantity),
-      category: form.categoryId ? { id: Number(form.categoryId) } : null,
+      category: form.category || null,
     };
     try {
       if (editingId === null) {
@@ -134,11 +141,10 @@ function Products() {
             </label>
           </div>
           <label>Category
-            <select name="categoryId" value={form.categoryId} onChange={handleChange}>
-              <option value="">No category</option>
-              {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+            <select name="category" value={form.category} onChange={handleChange}>
+              <option value="">Select category</option>
+              {PRODUCT_CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}
             </select>
-            {categories.length === 0 && <small>Category list unavailable or no categories created yet.</small>}
           </label>
           <div className="form-actions">
             <button type="submit" className="primary-button" disabled={saving}>
