@@ -160,21 +160,41 @@ function Products() {
       <div className="list-heading"><h3>Products</h3><span>{products.length} total</span></div>
       {loading && <p>Loading products...</p>}
       {!loading && !error && products.length === 0 && <p>No products found. Add your first product above.</p>}
-      <div className="product-grid">
-        {products.map((product) => (
-          <article className="product-card" key={product.id}>
-            <div className="product-card-title"><h3>{product.name}</h3><span className="product-id">#{product.id}</span></div>
-            <p className="product-description">{product.description || "No description"}</p>
-            <p><strong>Price:</strong> ₹{Number(product.price).toLocaleString("en-IN")}</p>
-            <p><strong>Quantity:</strong> {product.quantity ?? 0}</p>
-            <p><strong>Category:</strong> {typeof product.category === "object" ? (product.category?.name ?? "Not assigned") : (product.category ?? "Not assigned")}</p>
-            <div className="product-actions">
-              <button type="button" className="edit-button" onClick={() => startEdit(product)}>Edit</button>
-              <button type="button" className="delete-button" onClick={() => deleteProduct(product)}>Delete</button>
-            </div>
-          </article>
-        ))}
-      </div>
+      {!loading && products.length > 0 && (
+        <div className="products-table-wrapper">
+          <table className="products-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Product</th>
+                <th>Description</th>
+                <th>Price</th>
+                <th>Quantity</th>
+                <th>Category</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {products.map((product) => (
+                <tr key={product.id}>
+                  <td className="product-id">#{product.id}</td>
+                  <td className="table-product-name">{product.name}</td>
+                  <td className="table-description">{product.description || "No description"}</td>
+                  <td className="table-number">₹{Number(product.price).toLocaleString("en-IN")}</td>
+                  <td className="table-number">{product.quantity ?? 0}</td>
+                  <td>{typeof product.category === "object" ? (product.category?.name ?? "Not assigned") : (product.category ?? "Not assigned")}</td>
+                  <td>
+                    <div className="product-actions">
+                      <button type="button" className="edit-button" onClick={() => startEdit(product)}>Edit</button>
+                      <button type="button" className="delete-button" onClick={() => deleteProduct(product)}>Delete</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </main>
   );
 }
