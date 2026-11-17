@@ -4,7 +4,6 @@ import "./App.css";
 import apiClient from "./api/apiClient";
 import Navbar from "./components/Navbar";
 import Notifications from "./pages/Notifications";
-import LowStockAlerts from "./components/LowStockAlerts";
 import ArchitectureDashboard from "./pages/ArchitectureDashboard";
 
 const PRODUCT_CATEGORIES = [
@@ -201,7 +200,7 @@ function Products() {
 }
 
 function Home() {
-  return <><header className="header"><h1>Inventory Management System</h1><p>Manage your products in one place</p></header><LowStockAlerts /><Products /></>;
+  return <><header className="header"><h1>Inventory Management System</h1><p>Manage your products in one place</p></header><Products /></>;
 }
 
 function App() {
