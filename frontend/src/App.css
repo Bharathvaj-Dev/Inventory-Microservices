@@ -47,19 +47,3 @@ body { margin: 0; font-family: Arial, sans-serif; background: #f3f6fb; color: #1
   .product-form-card { padding: 18px; }
   .products-table { min-width: 850px; }
 }
-
-
-.low-stock-panel { max-width: 1100px; margin: 28px auto 0; padding: 0 24px; }
-.low-stock-card { background: #fff; border: 1px solid #fecaca; border-radius: 14px; padding: 20px; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05); }
-.low-stock-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-.low-stock-heading h2 { margin: 0 0 5px; color: #991b1b; font-size: 20px; }
-.low-stock-heading p { margin: 0; color: #64748b; font-size: 13px; }
-.low-stock-count { border-radius: 999px; background: #fee2e2; color: #991b1b; padding: 5px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; }
-.low-stock-list { display: grid; gap: 8px; }
-.low-stock-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border: 1px solid #fee2e2; border-radius: 9px; background: #fffafa; }
-.low-stock-item strong { color: #7f1d1d; }
-.low-stock-item small { display: block; margin-top: 4px; color: #64748b; }
-.low-stock-quantity { color: #b91c1c; font-weight: 700; white-space: nowrap; }
-.low-stock-empty { margin: 0; color: #166534; }
-.low-stock-error { margin: 0; color: #b91c1c; }
-@media (max-width: 600px) { .low-stock-panel { padding: 0 16px; } .low-stock-card { padding: 16px; } }
