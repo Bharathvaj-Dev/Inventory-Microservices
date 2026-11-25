@@ -6,7 +6,7 @@ function formatNumber(value) {
   return Number(value || 0).toLocaleString();
 }
 
-function toDate(value) {
+function parseDate(value) {
   if (!value) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
@@ -68,7 +68,7 @@ export default function Reports() {
   );
 
   const inRange = (record, field) => {
-    const date = toDate(record[field]);
+    const date = parseDate(record[field]);
     if (!date) return false;
     const day = date.toISOString().slice(0, 10);
     return (!fromDate || day >= fromDate) && (!toDate || day <= toDate);
