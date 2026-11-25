@@ -207,7 +207,7 @@ function App() {
         <Navbar />
         <Routes>
           <Route path="/" element={<DashboardPage />} />
-          <Route path="/products" element={<><header className="header"><h1>Product Management</h1><p>Manage your product catalogue</p></header><Products /></>} />
+          <Route path="/products" element={<div className="products-route"><header className="header"><h1>Product Management</h1><p>Manage your product catalogue</p></header><Products /></div>} />
           <Route path="/inventory" element={<InventoryPage />} />
           <Route path="/purchases" element={<PurchasesPage />} />
           <Route path="/sales" element={<SalesPage />} />
