@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import apiClient from "./api/apiClient";
 import "./Reports.css";
 
@@ -6,10 +6,12 @@ function formatNumber(value) {
   return Number(value || 0).toLocaleString();
 }
 
-function parseDate(value) {
-  if (!value) return null;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
+function isWithinRange(record, field, fromDate, toDate) {
+  if (!record[field]) return false;
+  const date = new Date(record[field]);
+  if (Number.isNaN(date.getTime())) return false;
+  const day = [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
+  return (!fromDate || day >= fromDate) && (!toDate || day <= toDate);
 }
 
 function downloadCsv(rows, filename) {
@@ -37,7 +39,7 @@ export default function Reports() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const loadReports = async () => {
+  const loadReports = useCallback(async () => {
     setLoading(true);
     try {
       const [productResponse, purchaseResponse, saleResponse] = await Promise.all([
@@ -56,30 +58,23 @@ export default function Reports() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void loadReports();
-  }, []);
+  }, [loadReports]);
 
   const productById = useMemo(
     () => new Map(products.map((product) => [String(product.id), product])),
     [products]
   );
 
-  const inRange = (record, field) => {
-    const date = parseDate(record[field]);
-    if (!date) return false;
-    const day = date.toISOString().slice(0, 10);
-    return (!fromDate || day >= fromDate) && (!toDate || day <= toDate);
-  };
-
   const filteredPurchases = useMemo(
-    () => purchases.filter((item) => inRange(item, "purchaseDate")),
+    () => purchases.filter((item) => isWithinRange(item, "purchaseDate", fromDate, toDate)),
     [purchases, fromDate, toDate]
   );
   const filteredSales = useMemo(
-    () => sales.filter((item) => inRange(item, "saleDate")),
+    () => sales.filter((item) => isWithinRange(item, "saleDate", fromDate, toDate)),
     [sales, fromDate, toDate]
   );
 
