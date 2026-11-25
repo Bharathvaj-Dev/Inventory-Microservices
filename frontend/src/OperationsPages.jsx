@@ -170,6 +170,11 @@ export function InventoryPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [search, setSearch] = useState("");
+  const [dateFilter, setDateFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("newest");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 8;
 
   const load = useCallback(async () => {
     try {
@@ -190,6 +195,45 @@ export function InventoryPage() {
   const visible = lowOnly ? items.filter((item) => Number(item.currentStock) <= Number(threshold)) : items;
   const reset = () => { setForm({ productId: "", currentStock: "" }); setEditing(null); };
 
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayPurchases = isPurchase ? records.filter((item) => {
+    const date = new Date(item.purchaseDate);
+    return !Number.isNaN(date.getTime()) && date >= todayStart;
+  }).length : 0;
+  const totalUnits = records.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+  const uniqueProducts = new Set(records.map((item) => String(item.productId))).size;
+  const filteredRecords = isPurchase ? records.filter((item) => {
+    const product = products.find((p) => String(p.id) === String(item.productId));
+    const term = search.trim().toLowerCase();
+    const matchesSearch = !term || String(item.purchaseId ?? "").toLowerCase().includes(term) || String(item.productId ?? "").toLowerCase().includes(term) || (product?.name || "").toLowerCase().includes(term);
+    const date = new Date(item.purchaseDate);
+    const days = dateFilter === "today" ? 0 : dateFilter === "7days" ? 7 : dateFilter === "30days" ? 30 : null;
+    const matchesDate = days === null || (!Number.isNaN(date.getTime()) && date >= new Date(todayStart.getTime() - days * 86400000));
+    return matchesSearch && matchesDate;
+  }) : records;
+  const sortedRecords = [...filteredRecords].sort((a, b) => {
+    if (!isPurchase) return 0;
+    if (sortBy === "oldest") return new Date(a.purchaseDate) - new Date(b.purchaseDate);
+    if (sortBy === "quantity-high") return Number(b.quantity) - Number(a.quantity);
+    if (sortBy === "quantity-low") return Number(a.quantity) - Number(b.quantity);
+    return new Date(b.purchaseDate) - new Date(a.purchaseDate);
+  });
+  const totalPages = Math.max(1, Math.ceil(sortedRecords.length / PAGE_SIZE));
+  const paginatedRecords = isPurchase ? sortedRecords.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : [...records].reverse();
+
+  function exportPurchases() {
+    const rows = [["Purchase ID", "Product ID", "Product Name", "Quantity", "Purchase Date"], ...sortedRecords.map((item) => {
+      const product = products.find((p) => String(p.id) === String(item.productId));
+      return [item.purchaseId, item.productId, product?.name || "", item.quantity, item.purchaseDate || ""];
+    })];
+    const csv = rows.map((row) => row.map((value) => '"' + String(value ?? "").replace(/"/g, '""') + '"').join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url; link.download = "purchase-history.csv"; link.click();
+    URL.revokeObjectURL(url);
+  }
   async function submit(event) {
     event.preventDefault(); setSaving(true); setError(""); setSuccess("");
     const payload = { productId: Number(form.productId), currentStock: Number(form.currentStock) };
@@ -210,6 +254,12 @@ export function InventoryPage() {
   return <main className="ops-content">
     <PageHeader eyebrow="STOCK CONTROL" title="Inventory" description="Track available stock and monitor low-stock items." action={<button className="ops-button ops-button-light" onClick={load}>↻ Refresh</button>} />
     <Notice error={error} success={success} />
+    {isPurchase && <div className="ops-metric-grid ops-purchase-metrics">
+      <Metric label="Total purchases" value={loading ? "—" : records.length} detail="Purchase transactions" icon="↓" />
+      <Metric label="Total units" value={loading ? "—" : totalUnits.toLocaleString()} detail="Units replenished" icon="▦" />
+      <Metric label="Today’s purchases" value={loading ? "—" : todayPurchases} detail="Transactions today" icon="◷" />
+      <Metric label="Unique products" value={loading ? "—" : uniqueProducts} detail="Products purchased" icon="▤" />
+    </div>}
     <section className="ops-panel"><div className="ops-panel-heading"><div><h2>{editing ? `Update product #${editing}` : "Add inventory record"}</h2><p>Inventory is tracked by product ID and current stock.</p></div></div>
       <form className="ops-form ops-form-inline" onSubmit={submit}>
         <label>Product<select value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })} required disabled={!!editing}><option value="">Select product</option>{products.map((p) => <option key={p.id} value={p.id}>#{p.id} · {p.name}</option>)}</select></label>
@@ -273,8 +323,32 @@ function TransactionPage({ type }) {
       </form>
       {!products.length && !loading && <p className="ops-muted">Create a product first before submitting a transaction.</p>}
     </section>
-    <section className="ops-panel"><div className="ops-panel-heading"><div><h2>{title} history</h2><p>{records.length} records returned by the service.</p></div></div>
-      {loading ? <div className="ops-empty">Loading {title.toLowerCase()}...</div> : !records.length ? <div className="ops-empty">No {title.toLowerCase()} records found yet.</div> : <div className="ops-table-wrap"><table className="ops-table"><thead><tr><th>Transaction ID</th><th>Product ID</th><th>Quantity</th><th>Date</th>{!isPurchase && <th>Saga ID</th>}</tr></thead><tbody>{[...records].reverse().map((item) => <tr key={isPurchase ? item.purchaseId : item.saleId}><td>#{isPurchase ? item.purchaseId : item.saleId}</td><td>#{item.productId}</td><td>{item.quantity}</td><td>{formatDate(isPurchase ? item.purchaseDate : item.saleDate)}</td>{!isPurchase && <td className="ops-saga-id">{item.sagaId || "—"}</td>}</tr>)}</tbody></table></div>}
+    <section className="ops-panel">
+      <div className="ops-panel-heading">
+        <div><h2>{title} history</h2><p>{isPurchase ? filteredRecords.length + " of " + records.length + " records" : records.length + " records returned by the service."}</p></div>
+        {isPurchase && <button className="ops-button ops-button-light" onClick={exportPurchases} disabled={!sortedRecords.length}>↓ Export CSV</button>}
+      </div>
+      {isPurchase && <div className="ops-purchase-toolbar">
+        <input aria-label="Search purchases" placeholder="Search purchase ID, product ID or name..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
+        <select aria-label="Filter purchase date" value={dateFilter} onChange={(e) => { setDateFilter(e.target.value); setPage(1); }}>
+          <option value="all">All dates</option><option value="today">Today</option><option value="7days">Last 7 days</option><option value="30days">Last 30 days</option>
+        </select>
+        <select aria-label="Sort purchases" value={sortBy} onChange={(e) => { setSortBy(e.target.value); setPage(1); }}>
+          <option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="quantity-high">Highest quantity</option><option value="quantity-low">Lowest quantity</option>
+        </select>
+      </div>}
+      {loading ? <div className="ops-empty">Loading {title.toLowerCase()}...</div> : !(isPurchase ? sortedRecords.length : records.length) ? <div className="ops-empty">{isPurchase && records.length ? "No purchases match your filters." : "No " + title.toLowerCase() + " records found yet."}</div> :
+        <div className="ops-table-wrap"><table className="ops-table"><thead><tr><th>Transaction ID</th><th>Product ID</th>{isPurchase && <th>Product name</th>}<th>Quantity</th><th>Date</th>{!isPurchase && <th>Saga ID</th>}</tr></thead><tbody>
+          {(isPurchase ? paginatedRecords : [...records].reverse()).map((item) => {
+            const product = products.find((p) => String(p.id) === String(item.productId));
+            return <tr key={isPurchase ? item.purchaseId : item.saleId}><td>#{isPurchase ? item.purchaseId : item.saleId}</td><td>#{item.productId}</td>{isPurchase && <td>{product?.name || "—"}</td>}<td>{item.quantity}</td><td>{formatDate(isPurchase ? item.purchaseDate : item.saleDate)}</td>{!isPurchase && <td className="ops-saga-id">{item.sagaId || "—"}</td>}</tr>;
+          })}
+        </tbody></table></div>}
+      {isPurchase && sortedRecords.length > PAGE_SIZE && <div className="ops-pagination">
+        <span>Page {page} of {totalPages} · {sortedRecords.length} purchases</span>
+        <div><button className="ops-button ops-button-light" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1}>Previous</button>
+          <button className="ops-button ops-button-light" onClick={() => setPage((current) => Math.min(totalPages, current + 1))} disabled={page === totalPages}>Next</button></div>
+      </div>}
     </section>
     <p className="ops-footnote">{isPurchase ? "Purchase requests are handled by the purchase service and its event-driven stock workflow." : "Sale requests return HTTP 202 and start a stock-reservation saga. A new sale record appears after successful processing."}</p>
   </main>;
