@@ -5,6 +5,7 @@ import apiClient from "./api/apiClient";
 import Navbar from "./components/Navbar";
 import Notifications from "./pages/Notifications";
 import ArchitectureDashboard from "./pages/ArchitectureDashboard";
+import { DashboardPage, InventoryPage, PurchasesPage, SalesPage } from "./OperationsPages";
 
 const PRODUCT_CATEGORIES = [
   "Electronics",
@@ -209,10 +210,14 @@ function App() {
       <div className="app">
         <Navbar />
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/products" element={<><header className="header"><h1>Product Management</h1><p>Manage your product catalogue</p></header><Products /></>} />
+          <Route path="/inventory" element={<InventoryPage />} />
+          <Route path="/purchases" element={<PurchasesPage />} />
+          <Route path="/sales" element={<SalesPage />} />
           <Route path="/architecture" element={<ArchitectureDashboard />} />
           <Route path="/notifications" element={<Notifications />} />
-          <Route path="*" element={<main className="container"><h2>Page not found</h2><Link to="/">Back to Products</Link></main>} />
+          <Route path="*" element={<main className="container"><h2>Page not found</h2><Link to="/">Back to Dashboard</Link></main>} />
         </Routes>
       </div>
     </BrowserRouter>
