@@ -8,6 +8,7 @@ const links = [
   { to: "/inventory", label: "Inventory", icon: "▥" },
   { to: "/purchases", label: "Purchases", icon: "↓" },
   { to: "/sales", label: "Sales", icon: "↗" },
+  { to: "/reports", label: "Reports", icon: "▧" },
 ];
 
 export default function Navbar() {
