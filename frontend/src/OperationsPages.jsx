@@ -41,9 +41,12 @@ export function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    refresh();
-    const timer = setInterval(refresh, 30000);
-    return () => clearInterval(timer);
+    const initialLoad = window.setTimeout(() => { void refresh(); }, 0);
+    const interval = window.setInterval(refresh, 30000);
+    return () => {
+      window.clearTimeout(initialLoad);
+      window.clearInterval(interval);
+    };
   }, [refresh]);
 
   const lowStock = data.inventory.filter((item) => Number(item.currentStock) < 10);
@@ -92,7 +95,10 @@ export function InventoryPage() {
     } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const initialLoad = window.setTimeout(() => { void load(); }, 0);
+    return () => window.clearTimeout(initialLoad);
+  }, [load]);
 
   const visible = lowOnly ? items.filter((item) => Number(item.currentStock) <= Number(threshold)) : items;
   const reset = () => { setForm({ productId: "", currentStock: "" }); setEditing(null); };
