@@ -215,9 +215,9 @@ export default function ProductManagement() {
           <span>Showing <strong>{firstVisible}–{lastVisible}</strong> of <strong>{filteredProducts.length}</strong> matching products</span>
           <div className="pm-pagination" aria-label="Product table pagination">
             <button type="button" onClick={() => setCurrentPage(1)} disabled={effectivePage === 1} aria-label="First page">«</button>
-            <button type="button" onClick={() => setCurrentPage((page) => Math.max(1, effectivePage - 1))} disabled={effectivePage === 1}>Previous</button>
+            <button type="button" onClick={() => setCurrentPage(Math.max(1, effectivePage - 1))} disabled={effectivePage === 1}>Previous</button>
             <span>Page <strong>{effectivePage}</strong> of <strong>{pageCount}</strong></span>
-            <button type="button" onClick={() => setCurrentPage((page) => Math.min(pageCount, effectivePage + 1))} disabled={effectivePage === pageCount}>Next</button>
+            <button type="button" onClick={() => setCurrentPage(Math.min(pageCount, effectivePage + 1))} disabled={effectivePage === pageCount}>Next</button>
             <button type="button" onClick={() => setCurrentPage(pageCount)} disabled={effectivePage === pageCount} aria-label="Last page">»</button>
           </div>
           <span className="pm-table-source">Product Service · API Gateway</span>
