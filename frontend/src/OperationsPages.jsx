@@ -1075,76 +1075,61 @@ function TransactionPage({ type }) {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
-  const filteredRecords = isPurchase
-    ? records.filter((item) => {
-        const query = search.trim().toLowerCase();
-        const product = productById.get(String(item.productId));
+  const dateField = isPurchase ? "purchaseDate" : "saleDate";
+  const idField = isPurchase ? "purchaseId" : "saleId";
 
-        const matchesSearch =
-          !query ||
-          String(item.purchaseId).toLowerCase().includes(query) ||
-          String(item.productId).toLowerCase().includes(query) ||
-          String(product?.name || "").toLowerCase().includes(query);
+  const filteredRecords = records.filter((item) => {
+    const query = search.trim().toLowerCase();
+    const product = productById.get(String(item.productId));
+    const matchesSearch =
+      !query ||
+      String(item[idField] ?? "").toLowerCase().includes(query) ||
+      String(item.productId ?? "").toLowerCase().includes(query) ||
+      String(product?.name || "").toLowerCase().includes(query) ||
+      String(item.sagaId || "").toLowerCase().includes(query);
 
-        const purchaseDate = new Date(item.purchaseDate);
+    const transactionDate = new Date(item[dateField]);
+    const matchesDate =
+      dateFilter === "all" ||
+      (!Number.isNaN(transactionDate.getTime()) &&
+        (dateFilter === "today"
+          ? transactionDate >= todayStart
+          : transactionDate >=
+            new Date(
+              todayStart.getTime() -
+                (dateFilter === "7days" ? 7 : 30) * 24 * 60 * 60 * 1000
+            )));
 
-        const matchesDate =
-          dateFilter === "all" ||
-          (!Number.isNaN(purchaseDate.getTime()) &&
-            (dateFilter === "today"
-              ? purchaseDate >= todayStart
-              : purchaseDate >=
-                new Date(
-                  todayStart.getTime() -
-                    (dateFilter === "7days" ? 7 : 30) *
-                      24 *
-                      60 *
-                      60 *
-                      1000
-                )));
+    return matchesSearch && matchesDate;
+  });
 
-        return matchesSearch && matchesDate;
-      })
-    : records;
+  const sortedRecords = [...filteredRecords].sort((a, b) => {
+    if (sortBy === "quantity-high") {
+      return Number(b.quantity) - Number(a.quantity);
+    }
+    if (sortBy === "quantity-low") {
+      return Number(a.quantity) - Number(b.quantity);
+    }
 
-  const sortedRecords = isPurchase
-    ? [...filteredRecords].sort((a, b) => {
-        if (sortBy === "quantity-high") {
-          return Number(b.quantity) - Number(a.quantity);
-        }
-        if (sortBy === "quantity-low") {
-          return Number(a.quantity) - Number(b.quantity);
-        }
+    const aDate = new Date(a[dateField] || 0).getTime();
+    const bDate = new Date(b[dateField] || 0).getTime();
+    return sortBy === "oldest" ? aDate - bDate : bDate - aDate;
+  });
 
-        const aDate = new Date(a.purchaseDate || 0).getTime();
-        const bDate = new Date(b.purchaseDate || 0).getTime();
-
-        return sortBy === "oldest"
-          ? aDate - bDate
-          : bDate - aDate;
-      })
-    : records;
-
-  const totalPages = Math.max(
-    1,
-    Math.ceil(sortedRecords.length / PAGE_SIZE)
-  );
+  const totalPages = Math.max(1, Math.ceil(sortedRecords.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
-
-  const paginatedRecords = isPurchase
-    ? sortedRecords.slice(
-        (currentPage - 1) * PAGE_SIZE,
-        currentPage * PAGE_SIZE
-      )
-    : records;
+  const paginatedRecords = sortedRecords.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
 
   const totalUnits = records.reduce(
     (sum, item) => sum + Math.max(0, Number(item.quantity) || 0),
     0
   );
 
-  const todayPurchases = records.filter((item) => {
-    const date = new Date(item.purchaseDate);
+  const todayTransactions = records.filter((item) => {
+    const date = new Date(item[dateField]);
     return !Number.isNaN(date.getTime()) && date >= todayStart;
   }).length;
 
@@ -1152,25 +1137,26 @@ function TransactionPage({ type }) {
     records.map((item) => String(item.productId))
   ).size;
 
-  const exportPurchases = () => {
+  const exportTransactions = () => {
     const rows = [
       [
-        "Purchase ID",
+        isPurchase ? "Purchase ID" : "Sale ID",
         "Product ID",
         "Product Name",
         "Quantity",
-        "Purchase Date",
+        isPurchase ? "Purchase Date" : "Sale Date",
+        ...(!isPurchase ? ["Saga ID"] : []),
       ],
       ...sortedRecords.map((item) => [
-        item.purchaseId,
+        item[idField],
         item.productId,
         productById.get(String(item.productId))?.name || "",
         item.quantity,
-        item.purchaseDate || "",
+        item[dateField] || "",
+        ...(!isPurchase ? [item.sagaId || ""] : []),
       ]),
     ];
-
-    downloadCsv(rows, "purchases-report.csv");
+    downloadCsv(rows, isPurchase ? "purchases-report.csv" : "sales-report.csv");
   };
 
   async function submit(event) {
@@ -1239,14 +1225,12 @@ function TransactionPage({ type }) {
 
       <Notice error={error} success={success} />
 
-      {isPurchase && (
-        <div className="ops-metric-grid ops-purchase-metrics">
-          <Metric label="Total purchases" value={loading ? "—" : records.length} detail="Purchase transactions" icon="↓" />
-          <Metric label="Total units" value={loading ? "—" : totalUnits.toLocaleString()} detail="Units replenished" icon="▦" />
-          <Metric label="Today's purchases" value={loading ? "—" : todayPurchases} detail="Transactions today" icon="◷" />
-          <Metric label="Unique products" value={loading ? "—" : uniqueProducts} detail="Products purchased" icon="▤" />
-        </div>
-      )}
+      <div className="ops-metric-grid ops-purchase-metrics">
+        <Metric label={isPurchase ? "Total purchases" : "Total sales"} value={loading ? "—" : records.length} detail="Transactions recorded" icon={isPurchase ? "↓" : "↗"} />
+        <Metric label="Total units" value={loading ? "—" : totalUnits.toLocaleString()} detail={isPurchase ? "Units replenished" : "Units sold"} icon="▦" />
+        <Metric label={isPurchase ? "Today's purchases" : "Today's sales"} value={loading ? "—" : todayTransactions} detail="Transactions today" icon="◷" />
+        <Metric label="Unique products" value={loading ? "—" : uniqueProducts} detail="Products involved" icon="▤" />
+      </div>
 
       <section className="ops-panel">
         <div className="ops-panel-heading">
@@ -1322,58 +1306,56 @@ function TransactionPage({ type }) {
             </p>
           </div>
 
-          {isPurchase && (
-            <button
-              className="ops-button ops-button-light"
-              onClick={exportPurchases}
-              disabled={!sortedRecords.length}
-            >
-              ↓ Export CSV
-            </button>
-          )}
+          <button
+            className="ops-button ops-button-light"
+            onClick={exportTransactions}
+            disabled={!sortedRecords.length}
+          >
+            ↓ Export CSV
+          </button>
         </div>
 
-        {isPurchase && (
-          <div className="ops-purchase-toolbar">
-            <input
-              aria-label="Search purchases"
-              placeholder="Search purchase ID, product ID or name..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-            />
+        <div className="ops-purchase-toolbar">
+          <input
+            aria-label={isPurchase ? "Search purchases" : "Search sales"}
+            placeholder={isPurchase
+              ? "Search purchase ID, product ID or name..."
+              : "Search sale ID, product ID, name or saga ID..."}
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+          />
 
-            <select
-              aria-label="Filter purchase date"
-              value={dateFilter}
-              onChange={(e) => {
-                setDateFilter(e.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="all">All dates</option>
-              <option value="today">Today</option>
-              <option value="7days">Last 7 days</option>
-              <option value="30days">Last 30 days</option>
-            </select>
+          <select
+            aria-label="Filter transaction date"
+            value={dateFilter}
+            onChange={(e) => {
+              setDateFilter(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="all">All dates</option>
+            <option value="today">Today</option>
+            <option value="7days">Last 7 days</option>
+            <option value="30days">Last 30 days</option>
+          </select>
 
-            <select
-              aria-label="Sort purchases"
-              value={sortBy}
-              onChange={(e) => {
-                setSortBy(e.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="newest">Newest first</option>
-              <option value="oldest">Oldest first</option>
-              <option value="quantity-high">Highest quantity</option>
-              <option value="quantity-low">Lowest quantity</option>
-            </select>
-          </div>
-        )}
+          <select
+            aria-label="Sort transactions"
+            value={sortBy}
+            onChange={(e) => {
+              setSortBy(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="quantity-high">Highest quantity</option>
+            <option value="quantity-low">Lowest quantity</option>
+          </select>
+        </div>
 
         {loading ? (
           <div className="ops-empty">
@@ -1392,7 +1374,7 @@ function TransactionPage({ type }) {
                 <tr>
                   <th>Transaction ID</th>
                   <th>Product ID</th>
-                  {isPurchase && <th>Product name</th>}
+                  <th>Product name</th>
                   <th>Quantity</th>
                   <th>Date</th>
                   {!isPurchase && <th>Saga ID</th>}
@@ -1400,10 +1382,7 @@ function TransactionPage({ type }) {
               </thead>
 
               <tbody>
-                {(isPurchase
-                  ? paginatedRecords
-                  : [...records].reverse()
-                ).map((item) => {
+                {paginatedRecords.map((item) => {
                   const product = productById.get(
                     String(item.productId)
                   );
@@ -1411,16 +1390,12 @@ function TransactionPage({ type }) {
                   return (
                     <tr
                       key={
-                        isPurchase ? item.purchaseId : item.saleId
+                        item[idField]
                       }
                     >
-                      <td>
-                        #{isPurchase ? item.purchaseId : item.saleId}
-                      </td>
+                      <td>#{item[idField]}</td>
                       <td>#{item.productId}</td>
-                      {isPurchase && (
-                        <td>{product?.name || "—"}</td>
-                      )}
+                      <td>{product?.name || "—"}</td>
                       <td>{item.quantity}</td>
                       <td>
                         {formatDate(
@@ -1440,10 +1415,10 @@ function TransactionPage({ type }) {
           </div>
         )}
 
-        {isPurchase && sortedRecords.length > PAGE_SIZE && (
+        {sortedRecords.length > PAGE_SIZE && (
           <div className="ops-pagination">
             <span>
-              Page {currentPage} of {totalPages} · {sortedRecords.length} purchases
+              Page {currentPage} of {totalPages} · {sortedRecords.length} {title.toLowerCase()}
             </span>
 
             <div>
