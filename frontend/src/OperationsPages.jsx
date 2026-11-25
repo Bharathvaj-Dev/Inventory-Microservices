@@ -31,8 +31,12 @@ export function DashboardPage() {
     const next = {};
     const keys = ["products", "inventory", "purchases", "sales", "queues"];
     results.forEach((result, index) => {
-      if (result.status === "fulfilled") next[keys[index]] = result.value.data;
-      else next[keys[index]] = index === 4 ? null : [];
+      if (result.status === "fulfilled") {
+        const value = result.value.data;
+        next[keys[index]] = index === 4 ? value : (Array.isArray(value) ? value : []);
+      } else {
+        next[keys[index]] = index === 4 ? null : [];
+      }
     });
     setData(next);
     const failed = results.filter((item) => item.status === "rejected").length;
@@ -49,8 +53,52 @@ export function DashboardPage() {
     };
   }, [refresh]);
 
-  const lowStock = data.inventory.filter((item) => Number(item.currentStock) < 10);
+  const lowStock = data.inventory.filter((item) => Number(item.currentStock) > 0 && Number(item.currentStock) < 10);
+  const outOfStock = data.inventory.filter((item) => Number(item.currentStock) <= 0);
+  const inStock = data.inventory.filter((item) => Number(item.currentStock) >= 10);
   const queueMessages = data.queues ? Object.entries(data.queues).filter(([key, value]) => key !== "queueCount" && value && typeof value === "object").reduce((sum, [, value]) => sum + Number(value.messages || 0), 0) : "—";
+
+  const monthBuckets = Array.from({ length: 6 }, (_, index) => {
+    const date = new Date();
+    date.setDate(1);
+    date.setHours(0, 0, 0, 0);
+    date.setMonth(date.getMonth() - (5 - index));
+    return {
+      key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`,
+      label: date.toLocaleDateString("en", { month: "short" }),
+      purchases: 0,
+      sales: 0,
+    };
+  });
+  const monthMap = new Map(monthBuckets.map((month) => [month.key, month]));
+  const addMonthlyQuantity = (records, dateField, metric) => {
+    records.forEach((record) => {
+      if (!record[dateField]) return;
+      const date = new Date(record[dateField]);
+      if (Number.isNaN(date.getTime())) return;
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      const bucket = monthMap.get(key);
+      if (bucket) bucket[metric] += Math.max(0, Number(record.quantity) || 0);
+    });
+  };
+  addMonthlyQuantity(data.purchases, "purchaseDate", "purchases");
+  addMonthlyQuantity(data.sales, "saleDate", "sales");
+  const monthlyMax = Math.max(1, ...monthBuckets.flatMap((month) => [month.purchases, month.sales]));
+
+  const topProducts = Object.values(data.sales.reduce((totals, sale) => {
+    const id = String(sale.productId ?? "unknown");
+    if (!totals[id]) totals[id] = { productId: id, quantity: 0, transactions: 0 };
+    totals[id].quantity += Math.max(0, Number(sale.quantity) || 0);
+    totals[id].transactions += 1;
+    return totals;
+  }, {})).sort((a, b) => b.quantity - a.quantity).slice(0, 5);
+  const topProductMax = Math.max(1, ...topProducts.map((item) => item.quantity));
+  const stockTotal = data.inventory.length;
+  const stockSegments = [
+    { label: "In stock", count: inStock.length, className: "ops-stock-in" },
+    { label: "Low stock", count: lowStock.length, className: "ops-stock-low" },
+    { label: "Out of stock", count: outOfStock.length, className: "ops-stock-out" },
+  ];
 
   return <main className="ops-content">
     <PageHeader eyebrow="OVERVIEW" title="Dashboard" description="A live overview of your inventory operations." action={<button className="ops-button ops-button-light" onClick={refresh}>↻ Refresh</button>} />
@@ -58,20 +106,59 @@ export function DashboardPage() {
     <div className="ops-metric-grid">
       <Metric label="Total products" value={loading ? "—" : data.products.length} detail="Product catalogue" icon="▦" />
       <Metric label="Inventory items" value={loading ? "—" : data.inventory.length} detail="Tracked stock records" icon="▤" />
-      <Metric label="Low stock alerts" value={loading ? "—" : lowStock.length} detail="Below 10 units" icon="⚑" />
+      <Metric label="Low stock alerts" value={loading ? "—" : lowStock.length} detail="1–9 units available" icon="⚑" />
       <Metric label="Purchase records" value={loading ? "—" : data.purchases.length} detail="Replenishment history" icon="↓" />
       <Metric label="Sales records" value={loading ? "—" : data.sales.length} detail="Completed sale records" icon="↗" />
       <Metric label="Queue messages" value={queueMessages} detail="Across monitored SQS queues" icon="☁" />
     </div>
+
+    <div className="ops-analytics-grid">
+      <section className="ops-panel ops-analytics-panel">
+        <div className="ops-panel-heading"><div><h2>Purchase vs Sales trend</h2><p>Monthly quantity movement · Last 6 months</p></div><div className="ops-chart-legend"><span><i className="ops-legend-purchase" /> Purchases</span><span><i className="ops-legend-sales" /> Sales</span></div></div>
+        {loading ? <div className="ops-empty">Loading transaction analytics...</div> : !data.purchases.length && !data.sales.length ? <div className="ops-empty">No transaction data available yet.</div> : <div className="ops-month-chart" role="img" aria-label="Monthly purchase and sales quantities for the last six months">
+          {monthBuckets.map((month) => <div className="ops-month-column" key={month.key}>
+            <div className="ops-month-bars">
+              <div className="ops-month-bar ops-month-bar-purchase" style={{ height: `${month.purchases / monthlyMax * 100}%` }} title={`Purchases: ${month.purchases}`} />
+              <div className="ops-month-bar ops-month-bar-sales" style={{ height: `${month.sales / monthlyMax * 100}%` }} title={`Sales: ${month.sales}`} />
+            </div>
+            <span>{month.label}</span>
+            <small>{month.purchases + month.sales}</small>
+          </div>)}
+        </div>}
+      </section>
+
+      <section className="ops-panel ops-analytics-panel">
+        <div className="ops-panel-heading"><div><h2>Stock distribution</h2><p>Inventory status by available units</p></div><span className="ops-pill ops-pill-info">{stockTotal} records</span></div>
+        {loading ? <div className="ops-empty">Loading stock analytics...</div> : !stockTotal ? <div className="ops-empty">No inventory records available.</div> : <>
+          <div className="ops-stock-track" role="img" aria-label={stockSegments.map((item) => `${item.label}: ${item.count}`).join(", ")}>
+            {stockSegments.map((item) => <span key={item.label} className={item.className} style={{ width: `${item.count / stockTotal * 100}%` }} />)}
+          </div>
+          <div className="ops-stock-list">{stockSegments.map((item) => <div className="ops-stock-row" key={item.label}><span><i className={item.className} />{item.label}</span><strong>{item.count}<small>{Math.round(item.count / stockTotal * 100)}%</small></strong></div>)}</div>
+        </>}
+      </section>
+    </div>
+
+    <section className="ops-panel">
+      <div className="ops-panel-heading"><div><h2>Top-selling products</h2><p>Ranked by total quantity sold across completed sales.</p></div><span className="ops-pill ops-pill-info">Top 5</span></div>
+      {loading ? <div className="ops-empty">Loading product performance...</div> : !topProducts.length ? <div className="ops-empty">No completed sales available to rank products.</div> : <div className="ops-top-products">{topProducts.map((item, index) => {
+        const product = data.products.find((entry) => String(entry.id) === item.productId);
+        return <div className="ops-top-product" key={item.productId}>
+          <span className="ops-top-rank">{index + 1}</span>
+          <div className="ops-top-product-info"><div><strong>{product?.name || `Product #${item.productId}`}</strong><small>Product #{item.productId} · {item.transactions} sale{item.transactions === 1 ? "" : "s"}</small></div><div className="ops-top-track"><span style={{ width: `${item.quantity / topProductMax * 100}%` }} /></div></div>
+          <strong className="ops-top-quantity">{item.quantity}<small>units</small></strong>
+        </div>;
+      })}</div>}
+    </section>
+
     <section className="ops-panel">
       <div className="ops-panel-heading"><div><h2>Low stock overview</h2><p>Inventory items with fewer than 10 units available.</p></div><span className={lowStock.length ? "ops-pill ops-pill-warning" : "ops-pill ops-pill-good"}>{lowStock.length} items</span></div>
-      {lowStock.length === 0 ? <div className="ops-empty">No low-stock items found, or inventory data is not available.</div> : <div className="ops-table-wrap"><table className="ops-table"><thead><tr><th>Product ID</th><th>Current stock</th><th>Last updated</th><th>Status</th></tr></thead><tbody>{lowStock.slice(0, 8).map((item) => <tr key={item.id}><td>#{item.productId}</td><td>{item.currentStock}</td><td>{formatDate(item.lastUpdated)}</td><td><span className="ops-pill ops-pill-warning">Low stock</span></td></tr>)}</tbody></table></div>}
+      {loading ? <div className="ops-empty">Loading inventory...</div> : lowStock.length === 0 ? <div className="ops-empty">No low-stock items found.</div> : <div className="ops-table-wrap"><table className="ops-table"><thead><tr><th>Product ID</th><th>Current stock</th><th>Last updated</th><th>Status</th></tr></thead><tbody>{lowStock.slice(0, 8).map((item) => <tr key={item.id}><td>#{item.productId}</td><td>{item.currentStock}</td><td>{formatDate(item.lastUpdated)}</td><td><span className="ops-pill ops-pill-warning">Low stock</span></td></tr>)}</tbody></table></div>}
     </section>
+
     <section className="ops-panel"><div className="ops-panel-heading"><div><h2>Recent activity</h2><p>Latest purchase and sales transactions.</p></div></div><div className="ops-activity-grid"><div><h3>Purchases</h3>{data.purchases.slice(-5).reverse().map((item) => <div className="ops-activity-row" key={item.purchaseId}><span className="ops-activity-icon">↓</span><div><strong>Purchase #{item.purchaseId}</strong><small>Product #{item.productId} · Qty {item.quantity}</small></div><time>{formatDate(item.purchaseDate)}</time></div>)}{!data.purchases.length && <p className="ops-muted">No purchase records yet.</p>}</div><div><h3>Sales</h3>{data.sales.slice(-5).reverse().map((item) => <div className="ops-activity-row" key={item.saleId}><span className="ops-activity-icon ops-activity-sale">↗</span><div><strong>Sale #{item.saleId}</strong><small>Product #{item.productId} · Qty {item.quantity}</small></div><time>{formatDate(item.saleDate)}</time></div>)}{!data.sales.length && <p className="ops-muted">No completed sales yet.</p>}</div></div></section>
     <p className="ops-footnote">Dashboard data refreshes automatically every 30 seconds. Values are read from the API Gateway.</p>
   </main>;
 }
-
 export function InventoryPage() {
   const [items, setItems] = useState([]);
   const [products, setProducts] = useState([]);
