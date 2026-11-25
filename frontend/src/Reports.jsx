@@ -60,7 +60,8 @@ export default function Reports() {
   }, []);
 
   useEffect(() => {
-    void loadReports();
+    const task = Promise.resolve().then(loadReports);
+    return () => { void task; };
   }, [loadReports]);
 
   const refreshReports = () => {
