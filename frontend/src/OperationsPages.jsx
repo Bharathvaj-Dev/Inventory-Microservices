@@ -1299,11 +1299,7 @@ function TransactionPage({ type }) {
         <div className="ops-panel-heading">
           <div>
             <h2>{title} history</h2>
-            <p>
-              {isPurchase
-                ? `${filteredRecords.length} of ${records.length} records`
-                : `${records.length} records returned by the service.`}
-            </p>
+            <p>{filteredRecords.length} of {records.length} records</p>
           </div>
 
           <button
@@ -1361,10 +1357,10 @@ function TransactionPage({ type }) {
           <div className="ops-empty">
             Loading {title.toLowerCase()}...
           </div>
-        ) : !(isPurchase ? sortedRecords.length : records.length) ? (
+        ) : !sortedRecords.length ? (
           <div className="ops-empty">
-            {isPurchase && records.length
-              ? "No purchases match your filters."
+            {records.length
+              ? `No ${title.toLowerCase()} match your filters.`
               : `No ${title.toLowerCase()} records found yet.`}
           </div>
         ) : (
