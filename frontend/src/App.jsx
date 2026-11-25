@@ -42,7 +42,8 @@ function Products() {
   }, []);
 
   useEffect(() => {
-    loadProducts();
+    const initialLoad = window.setTimeout(() => { void loadProducts(); }, 0);
+    return () => window.clearTimeout(initialLoad);
   }, [loadProducts]);
 
   function handleChange(event) {
