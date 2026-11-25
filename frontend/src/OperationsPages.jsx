@@ -323,7 +323,7 @@ function TransactionPage({ type }) {
     const matchesDate = dateFilter === "all" ||
       (!Number.isNaN(purchaseDate.getTime()) && (dateFilter === "today"
         ? purchaseDate >= todayStart
-        : purchaseDate >= new Date(Date.now() - (dateFilter === "7days" ? 7 : 30) * 24 * 60 * 60 * 1000)));
+        : purchaseDate >= new Date(todayStart.getTime() - (dateFilter === "7days" ? 7 : 30) * 24 * 60 * 60 * 1000)));
     return matchesSearch && matchesDate;
   }) : records;
   const sortedRecords = isPurchase ? [...filteredRecords].sort((a, b) => {
