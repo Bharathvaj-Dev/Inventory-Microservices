@@ -221,7 +221,7 @@ export function InventoryPage() {
       const product = productById.get(String(item.productId));
       return [item.id, item.productId, product?.name || "", product?.category || product?.categoryName || "", item.currentStock, getStockStatus(item), item.lastUpdated || ""];
     })];
-    const csv = rows.map((row) => row.map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",")).join("\\r\\n");
+    const csv = rows.map((row) => row.map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
     const link = document.createElement("a");
     link.href = url;
