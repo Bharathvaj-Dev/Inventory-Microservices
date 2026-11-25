@@ -3,7 +3,7 @@ import apiClient from "../api/apiClient";
 import "./Notifications.css";
 
 function getSeverity(message = "") {
-  const match = message.match(/stock:\s*(\d+)/i);
+  const match = String(message || "").match(/stock:\s*(\d+)/i);
   if (!match) return "INFO";
   const stock = Number(match[1]);
   return stock === 0 ? "CRITICAL" : stock < 10 ? "WARNING" : "INFO";
