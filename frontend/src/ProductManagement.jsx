@@ -31,6 +31,8 @@ export default function ProductManagement() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 8;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -77,6 +79,13 @@ export default function ProductManagement() {
       return Number(b.id || 0) - Number(a.id || 0);
     });
   }, [products, search, categoryFilter, stockFilter, sortBy]);
+
+  useEffect(() => { setCurrentPage(1); }, [search, categoryFilter, stockFilter, sortBy]);
+
+  const pageCount = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
+  const paginatedProducts = filteredProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const firstVisible = filteredProducts.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const lastVisible = Math.min(currentPage * pageSize, filteredProducts.length);
 
   const summary = useMemo(() => ({
     total: products.length,
@@ -191,7 +200,7 @@ export default function ProductManagement() {
           : products.length === 0 ? <div className="pm-empty"><strong>Your catalogue is empty</strong><span>Add your first product using the form above.</span></div>
           : filteredProducts.length === 0 ? <div className="pm-empty"><strong>No matching products</strong><span>Try changing your search or filters.</span><button className="pm-button pm-button-outline" onClick={() => { setSearch(""); setCategoryFilter("all"); setStockFilter("all"); }}>Clear filters</button></div>
           : <div className="pm-table-wrap"><table className="pm-table"><thead><tr><th>PRODUCT</th><th>CATEGORY</th><th>PRICE</th><th>QUANTITY</th><th>STOCK STATUS</th><th className="pm-actions-heading">ACTIONS</th></tr></thead><tbody>
-            {filteredProducts.map((product) => {
+            {paginatedProducts.map((product) => {
               const stock = stockState(product.quantity);
               return <tr key={product.id}>
                 <td><div className="pm-product-cell"><span className="pm-product-avatar">{String(product.name || "P").trim().charAt(0).toUpperCase()}</span><div><strong>{product.name || "Unnamed product"}</strong><small>Product #{product.id}</small>{product.description && <small className="pm-description">{product.description}</small>}</div></div></td>
@@ -203,7 +212,17 @@ export default function ProductManagement() {
               </tr>;
             })}
           </tbody></table></div>}
-        <div className="pm-table-footer">Showing {filteredProducts.length} of {products.length} products <span>Data loaded from Product Service via API Gateway</span></div>
+        <div className="pm-table-footer">
+          <span>Showing <strong>{firstVisible}–{lastVisible}</strong> of <strong>{filteredProducts.length}</strong> matching products</span>
+          <div className="pm-pagination" aria-label="Product table pagination">
+            <button type="button" onClick={() => setCurrentPage(1)} disabled={currentPage === 1} aria-label="First page">«</button>
+            <button type="button" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={currentPage === 1}>Previous</button>
+            <span>Page <strong>{currentPage}</strong> of <strong>{pageCount}</strong></span>
+            <button type="button" onClick={() => setCurrentPage((page) => Math.min(pageCount, page + 1))} disabled={currentPage === pageCount}>Next</button>
+            <button type="button" onClick={() => setCurrentPage(pageCount)} disabled={currentPage === pageCount} aria-label="Last page">»</button>
+          </div>
+          <span className="pm-table-source">Product Service · API Gateway</span>
+        </div>
       </section>
       <p className="pm-footnote">Stock status is calculated from the product quantity field. Inventory service stock records remain managed separately in the Inventory page.</p>
     </main>
