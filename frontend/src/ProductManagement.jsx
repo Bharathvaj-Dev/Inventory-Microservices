@@ -80,12 +80,11 @@ export default function ProductManagement() {
     });
   }, [products, search, categoryFilter, stockFilter, sortBy]);
 
-  useEffect(() => { setCurrentPage(1); }, [search, categoryFilter, stockFilter, sortBy]);
-
   const pageCount = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
-  const paginatedProducts = filteredProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-  const firstVisible = filteredProducts.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-  const lastVisible = Math.min(currentPage * pageSize, filteredProducts.length);
+  const effectivePage = Math.min(currentPage, pageCount);
+  const paginatedProducts = filteredProducts.slice((effectivePage - 1) * pageSize, effectivePage * pageSize);
+  const firstVisible = filteredProducts.length === 0 ? 0 : (effectivePage - 1) * pageSize + 1;
+  const lastVisible = Math.min(effectivePage * pageSize, filteredProducts.length);
 
   const summary = useMemo(() => ({
     total: products.length,
@@ -215,11 +214,11 @@ export default function ProductManagement() {
         <div className="pm-table-footer">
           <span>Showing <strong>{firstVisible}–{lastVisible}</strong> of <strong>{filteredProducts.length}</strong> matching products</span>
           <div className="pm-pagination" aria-label="Product table pagination">
-            <button type="button" onClick={() => setCurrentPage(1)} disabled={currentPage === 1} aria-label="First page">«</button>
-            <button type="button" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={currentPage === 1}>Previous</button>
-            <span>Page <strong>{currentPage}</strong> of <strong>{pageCount}</strong></span>
-            <button type="button" onClick={() => setCurrentPage((page) => Math.min(pageCount, page + 1))} disabled={currentPage === pageCount}>Next</button>
-            <button type="button" onClick={() => setCurrentPage(pageCount)} disabled={currentPage === pageCount} aria-label="Last page">»</button>
+            <button type="button" onClick={() => setCurrentPage(1)} disabled={effectivePage === 1} aria-label="First page">«</button>
+            <button type="button" onClick={() => setCurrentPage((page) => Math.max(1, effectivePage - 1))} disabled={effectivePage === 1}>Previous</button>
+            <span>Page <strong>{effectivePage}</strong> of <strong>{pageCount}</strong></span>
+            <button type="button" onClick={() => setCurrentPage((page) => Math.min(pageCount, effectivePage + 1))} disabled={effectivePage === pageCount}>Next</button>
+            <button type="button" onClick={() => setCurrentPage(pageCount)} disabled={effectivePage === pageCount} aria-label="Last page">»</button>
           </div>
           <span className="pm-table-source">Product Service · API Gateway</span>
         </div>
