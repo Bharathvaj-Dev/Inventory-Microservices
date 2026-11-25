@@ -165,11 +165,16 @@ export function InventoryPage() {
   const [form, setForm] = useState({ productId: "", currentStock: "" });
   const [editing, setEditing] = useState(null);
   const [threshold, setThreshold] = useState(10);
-  const [lowOnly, setLowOnly] = useState(false);
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("all");
+  const [status, setStatus] = useState("all");
+  const [sort, setSort] = useState("updated");
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const pageSize = 8;
 
   const load = useCallback(async () => {
     try {
@@ -187,8 +192,43 @@ export function InventoryPage() {
     return () => window.clearTimeout(initialLoad);
   }, [load]);
 
-  const visible = lowOnly ? items.filter((item) => Number(item.currentStock) <= Number(threshold)) : items;
+  const productById = new Map(products.map((product) => [String(product.id), product]));
+  const getStockStatus = (item) => Number(item.currentStock) <= 0 ? "out" : Number(item.currentStock) < Number(threshold) ? "low" : "in";
+  const filteredItems = items.filter((item) => {
+    const product = productById.get(String(item.productId));
+    const query = search.trim().toLowerCase();
+    const matchesSearch = !query || String(item.productId).includes(query) || String(product?.name || "").toLowerCase().includes(query);
+    const matchesCategory = category === "all" || String(product?.category || product?.categoryName || "") === category;
+    const matchesStatus = status === "all" || getStockStatus(item) === status;
+    return matchesSearch && matchesCategory && matchesStatus;
+  }).sort((a, b) => {
+    if (sort === "stock-asc") return Number(a.currentStock) - Number(b.currentStock);
+    if (sort === "stock-desc") return Number(b.currentStock) - Number(a.currentStock);
+    if (sort === "name") return String(productById.get(String(a.productId))?.name || "").localeCompare(String(productById.get(String(b.productId))?.name || ""));
+    return new Date(b.lastUpdated || 0).getTime() - new Date(a.lastUpdated || 0).getTime();
+  });
+  const pageCount = Math.max(1, Math.ceil(filteredItems.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const pageItems = filteredItems.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const lowCount = items.filter((item) => getStockStatus(item) === "low").length;
+  const outCount = items.filter((item) => getStockStatus(item) === "out").length;
+  const totalUnits = items.reduce((sum, item) => sum + Math.max(0, Number(item.currentStock) || 0), 0);
+  const categories = [...new Set(products.map((product) => product.category || product.categoryName).filter(Boolean))].sort();
+
   const reset = () => { setForm({ productId: "", currentStock: "" }); setEditing(null); };
+  const exportCsv = () => {
+    const rows = [["Record ID", "Product ID", "Product Name", "Category", "Current Stock", "Status", "Last Updated"], ...filteredItems.map((item) => {
+      const product = productById.get(String(item.productId));
+      return [item.id, item.productId, product?.name || "", product?.category || product?.categoryName || "", item.currentStock, getStockStatus(item), item.lastUpdated || ""];
+    })];
+    const csv = rows.map((row) => row.map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",")).join("\\r\\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "inventory-report.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   async function submit(event) {
     event.preventDefault(); setSaving(true); setError(""); setSuccess("");
@@ -208,8 +248,14 @@ export function InventoryPage() {
   }
 
   return <main className="ops-content">
-    <PageHeader eyebrow="STOCK CONTROL" title="Inventory" description="Track available stock and monitor low-stock items." action={<button className="ops-button ops-button-light" onClick={load}>↻ Refresh</button>} />
+    <PageHeader eyebrow="STOCK CONTROL" title="Inventory Management" description="Monitor stock levels, identify risks, and manage inventory records." action={<div className="ops-header-actions"><button className="ops-button ops-button-light" onClick={load}>↻ Refresh</button><button className="ops-button ops-button-primary" onClick={exportCsv} disabled={!filteredItems.length}>↓ Export CSV</button></div>} />
     <Notice error={error} success={success} />
+    <div className="ops-inventory-summary">
+      <Metric label="Inventory records" value={loading ? "—" : items.length} detail="Tracked product stocks" icon="▤" />
+      <Metric label="Total units" value={loading ? "—" : totalUnits.toLocaleString()} detail="Available stock quantity" icon="▦" />
+      <Metric label="Low stock" value={loading ? "—" : lowCount} detail={`Below ${threshold} units`} icon="⚑" />
+      <Metric label="Out of stock" value={loading ? "—" : outCount} detail="Zero available units" icon="!" />
+    </div>
     <section className="ops-panel"><div className="ops-panel-heading"><div><h2>{editing ? `Update product #${editing}` : "Add inventory record"}</h2><p>Inventory is tracked by product ID and current stock.</p></div></div>
       <form className="ops-form ops-form-inline" onSubmit={submit}>
         <label>Product<select value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })} required disabled={!!editing}><option value="">Select product</option>{products.map((p) => <option key={p.id} value={p.id}>#{p.id} · {p.name}</option>)}</select></label>
@@ -217,8 +263,19 @@ export function InventoryPage() {
         <div className="ops-form-actions"><button className="ops-button ops-button-primary" disabled={saving}>{saving ? "Saving..." : editing ? "Save stock" : "Add record"}</button>{editing && <button type="button" className="ops-button ops-button-light" onClick={reset}>Cancel</button>}</div>
       </form>
     </section>
-    <section className="ops-panel"><div className="ops-panel-heading"><div><h2>Stock records</h2><p>{visible.length} of {items.length} inventory records</p></div><div className="ops-filter"><label><input type="checkbox" checked={lowOnly} onChange={(e) => setLowOnly(e.target.checked)} /> Low stock only</label><input aria-label="Low stock threshold" type="number" min="0" value={threshold} onChange={(e) => setThreshold(e.target.value)} /></div></div>
-      {loading ? <div className="ops-empty">Loading inventory...</div> : !visible.length ? <div className="ops-empty">No inventory records found.</div> : <div className="ops-table-wrap"><table className="ops-table"><thead><tr><th>Record ID</th><th>Product ID</th><th>Current stock</th><th>Last updated</th><th>Status</th><th>Actions</th></tr></thead><tbody>{visible.map((item) => <tr key={item.id}><td>#{item.id}</td><td>#{item.productId}</td><td><strong>{item.currentStock}</strong></td><td>{formatDate(item.lastUpdated)}</td><td><span className={Number(item.currentStock) <= Number(threshold) ? "ops-pill ops-pill-warning" : "ops-pill ops-pill-good"}>{Number(item.currentStock) <= Number(threshold) ? "Low stock" : "In stock"}</span></td><td><div className="ops-row-actions"><button className="ops-link-button" onClick={() => { setEditing(item.productId); setForm({ productId: String(item.productId), currentStock: String(item.currentStock) }); }}>Edit</button><button className="ops-link-button ops-danger-text" onClick={() => remove(item)}>Delete</button></div></td></tr>)}</tbody></table></div>}
+    <section className="ops-panel"><div className="ops-panel-heading"><div><h2>Stock records</h2><p>Showing {filteredItems.length ? (currentPage - 1) * pageSize + 1 : 0}–{Math.min(currentPage * pageSize, filteredItems.length)} of {filteredItems.length} matching records</p></div><label className="ops-threshold-control">Low-stock threshold<input type="number" min="1" value={threshold} onChange={(e) => { setThreshold(Math.max(1, Number(e.target.value) || 1)); setPage(1); }} /></label></div>
+      <div className="ops-inventory-toolbar">
+        <input className="ops-search-input" type="search" placeholder="Search product name or ID..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} aria-label="Search inventory" />
+        <select value={category} onChange={(e) => { setCategory(e.target.value); setPage(1); }} aria-label="Filter by category"><option value="all">All categories</option>{categories.map((item) => <option key={item} value={item}>{item}</option>)}</select>
+        <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} aria-label="Filter by stock status"><option value="all">All stock statuses</option><option value="in">In stock</option><option value="low">Low stock</option><option value="out">Out of stock</option></select>
+        <select value={sort} onChange={(e) => { setSort(e.target.value); setPage(1); }} aria-label="Sort inventory"><option value="updated">Recently updated</option><option value="name">Product name</option><option value="stock-asc">Stock: low to high</option><option value="stock-desc">Stock: high to low</option></select>
+      </div>
+      {loading ? <div className="ops-empty">Loading inventory...</div> : !filteredItems.length ? <div className="ops-empty">No inventory records match these filters.</div> : <div className="ops-table-wrap"><table className="ops-table"><thead><tr><th>Record ID</th><th>Product</th><th>Category</th><th>Current stock</th><th>Last updated</th><th>Status</th><th>Actions</th></tr></thead><tbody>{pageItems.map((item) => {
+        const product = productById.get(String(item.productId));
+        const stockStatus = getStockStatus(item);
+        return <tr key={item.id}><td>#{item.id}</td><td><strong>{product?.name || `Product #${item.productId}`}</strong><small className="ops-cell-subtitle">ID #{item.productId}</small></td><td>{product?.category || product?.categoryName || "—"}</td><td><strong>{item.currentStock}</strong></td><td>{formatDate(item.lastUpdated)}</td><td><span className={stockStatus === "out" ? "ops-pill ops-pill-danger" : stockStatus === "low" ? "ops-pill ops-pill-warning" : "ops-pill ops-pill-good"}>{stockStatus === "out" ? "Out of stock" : stockStatus === "low" ? "Low stock" : "In stock"}</span></td><td><div className="ops-row-actions"><button className="ops-link-button" onClick={() => { setEditing(item.productId); setForm({ productId: String(item.productId), currentStock: String(item.currentStock) }); }}>Edit</button><button className="ops-link-button ops-danger-text" onClick={() => remove(item)}>Delete</button></div></td></tr>;
+      })}</tbody></table></div>}
+      {!loading && filteredItems.length > pageSize && <div className="ops-pagination"><span>Page {currentPage} of {pageCount}</span><div><button className="ops-button ops-button-light" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={currentPage === 1}>Previous</button><button className="ops-button ops-button-light" onClick={() => setPage((value) => Math.min(pageCount, value + 1))} disabled={currentPage === pageCount}>Next</button></div></div>}
     </section>
   </main>;
 }
