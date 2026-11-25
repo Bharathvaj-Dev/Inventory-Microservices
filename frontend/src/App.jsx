@@ -200,10 +200,6 @@ function Products() {
   );
 }
 
-function Home() {
-  return <><header className="header"><h1>Inventory Management System</h1><p>Manage your products in one place</p></header><Products /></>;
-}
-
 function App() {
   return (
     <BrowserRouter>
