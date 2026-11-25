@@ -40,7 +40,6 @@ export default function Reports() {
   const [error, setError] = useState("");
 
   const loadReports = useCallback(async () => {
-    setLoading(true);
     try {
       const [productResponse, purchaseResponse, saleResponse] = await Promise.all([
         apiClient.get("/api/products"),
@@ -63,6 +62,11 @@ export default function Reports() {
   useEffect(() => {
     void loadReports();
   }, [loadReports]);
+
+  const refreshReports = () => {
+    setLoading(true);
+    void loadReports();
+  };
 
   const productById = useMemo(
     () => new Map(products.map((product) => [String(product.id), product])),
@@ -133,7 +137,7 @@ export default function Reports() {
           <p>Explore purchase and sales activity with product and category breakdowns.</p>
         </div>
         <div className="reports-header-actions">
-          <button className="ops-button ops-button-light" onClick={loadReports} disabled={loading}>↻ Refresh</button>
+          <button className="ops-button ops-button-light" onClick={refreshReports} disabled={loading}>↻ Refresh</button>
           <button className="ops-button ops-button-primary" onClick={exportReport} disabled={loading || !visibleProducts.length}>↓ Export CSV</button>
         </div>
       </header>
