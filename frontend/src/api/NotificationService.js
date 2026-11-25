@@ -20,11 +20,12 @@ setLoading(false);
 }, []);
 
 useEffect(() => {
-fetchNotifications();
-
-const intervalId = setInterval(fetchNotifications, 10000);
-return () => clearInterval(intervalId);
-
+const initialLoad = window.setTimeout(() => { void fetchNotifications(); }, 0);
+const intervalId = window.setInterval(fetchNotifications, 10000);
+return () => {
+window.clearTimeout(initialLoad);
+window.clearInterval(intervalId);
+};
 }, [fetchNotifications]);
 
 const unreadCount = notifications.filter(
