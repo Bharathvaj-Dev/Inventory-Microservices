@@ -221,7 +221,7 @@ export function InventoryPage() {
       const product = productById.get(String(item.productId));
       return [item.id, item.productId, product?.name || "", product?.category || product?.categoryName || "", item.currentStock, getStockStatus(item), item.lastUpdated || ""];
     })];
-    const csv = rows.map((row) => row.map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",")).join("\\r\\n");
+    const csv = rows.map((row) => row.map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
     const link = document.createElement("a");
     link.href = url;
@@ -283,9 +283,14 @@ export function InventoryPage() {
 function TransactionPage({ type }) {
   const isPurchase = type === "purchase";
   const endpoint = isPurchase ? "/api/purchases" : "/api/sales";
+  const PAGE_SIZE = 8;
   const [records, setRecords] = useState([]);
   const [products, setProducts] = useState([]);
   const [form, setForm] = useState({ productId: "", quantity: "1" });
+  const [search, setSearch] = useState("");
+  const [dateFilter, setDateFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("newest");
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -306,6 +311,51 @@ function TransactionPage({ type }) {
     return () => window.clearTimeout(initialLoad);
   }, [load]);
 
+  const productById = new Map(products.map((product) => [String(product.id), product]));
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const filteredRecords = isPurchase ? records.filter((item) => {
+    const query = search.trim().toLowerCase();
+    const product = productById.get(String(item.productId));
+    const matchesSearch = !query || String(item.purchaseId).toLowerCase().includes(query) ||
+      String(item.productId).toLowerCase().includes(query) || String(product?.name || "").toLowerCase().includes(query);
+    const purchaseDate = new Date(item.purchaseDate);
+    const matchesDate = dateFilter === "all" ||
+      (!Number.isNaN(purchaseDate.getTime()) && (dateFilter === "today"
+        ? purchaseDate >= todayStart
+        : purchaseDate >= new Date(todayStart.getTime() - (dateFilter === "7days" ? 7 : 30) * 24 * 60 * 60 * 1000)));
+    return matchesSearch && matchesDate;
+  }) : records;
+  const sortedRecords = isPurchase ? [...filteredRecords].sort((a, b) => {
+    if (sortBy === "quantity-high") return Number(b.quantity) - Number(a.quantity);
+    if (sortBy === "quantity-low") return Number(a.quantity) - Number(b.quantity);
+    const aDate = new Date(a.purchaseDate || 0).getTime();
+    const bDate = new Date(b.purchaseDate || 0).getTime();
+    return sortBy === "oldest" ? aDate - bDate : bDate - aDate;
+  }) : records;
+  const totalPages = Math.max(1, Math.ceil(sortedRecords.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedRecords = isPurchase ? sortedRecords.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE) : records;
+  const totalUnits = records.reduce((sum, item) => sum + Math.max(0, Number(item.quantity) || 0), 0);
+  const todayPurchases = records.filter((item) => {
+    const date = new Date(item.purchaseDate);
+    return !Number.isNaN(date.getTime()) && date >= todayStart;
+  }).length;
+  const uniqueProducts = new Set(records.map((item) => String(item.productId))).size;
+
+  const exportPurchases = () => {
+    const rows = [["Purchase ID", "Product ID", "Product Name", "Quantity", "Purchase Date"], ...sortedRecords.map((item) => [
+      item.purchaseId, item.productId, productById.get(String(item.productId))?.name || "", item.quantity, item.purchaseDate || ""
+    ])];
+    const csv = rows.map((row) => row.map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",")).join("\\r\\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "purchases-report.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   async function submit(event) {
     event.preventDefault(); setSaving(true); setError(""); setSuccess("");
     try {
@@ -322,6 +372,12 @@ function TransactionPage({ type }) {
   return <main className="ops-content">
     <PageHeader eyebrow={isPurchase ? "REPLENISHMENT" : "ORDER PROCESSING"} title={title} description={isPurchase ? "Create purchase requests to replenish product stock." : "Submit sales and track their asynchronous processing."} action={<button className="ops-button ops-button-light" onClick={load}>↻ Refresh</button>} />
     <Notice error={error} success={success} />
+    {isPurchase && <div className="ops-metric-grid ops-purchase-metrics">
+      <Metric label="Total purchases" value={loading ? "—" : records.length} detail="Purchase transactions" icon="↓" />
+      <Metric label="Total units" value={loading ? "—" : totalUnits.toLocaleString()} detail="Units replenished" icon="▦" />
+      <Metric label="Today's purchases" value={loading ? "—" : todayPurchases} detail="Transactions today" icon="◷" />
+      <Metric label="Unique products" value={loading ? "—" : uniqueProducts} detail="Products purchased" icon="▤" />
+    </div>}
     <section className="ops-panel"><div className="ops-panel-heading"><div><h2>Create {isPurchase ? "purchase" : "sale"} request</h2><p>Choose a product and enter the required quantity.</p></div><span className="ops-pill ops-pill-info">{isPurchase ? "Stock replenishment" : "Saga workflow"}</span></div>
       <form className="ops-form ops-form-inline" onSubmit={submit}>
         <label>Product<select value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })} required><option value="">Select product</option>{products.map((p) => <option key={p.id} value={p.id}>#{p.id} · {p.name}</option>)}</select></label>
@@ -330,8 +386,31 @@ function TransactionPage({ type }) {
       </form>
       {!products.length && !loading && <p className="ops-muted">Create a product first before submitting a transaction.</p>}
     </section>
-    <section className="ops-panel"><div className="ops-panel-heading"><div><h2>{title} history</h2><p>{records.length} records returned by the service.</p></div></div>
-      {loading ? <div className="ops-empty">Loading {title.toLowerCase()}...</div> : !records.length ? <div className="ops-empty">No {title.toLowerCase()} records found yet.</div> : <div className="ops-table-wrap"><table className="ops-table"><thead><tr><th>Transaction ID</th><th>Product ID</th><th>Quantity</th><th>Date</th>{!isPurchase && <th>Saga ID</th>}</tr></thead><tbody>{[...records].reverse().map((item) => <tr key={isPurchase ? item.purchaseId : item.saleId}><td>#{isPurchase ? item.purchaseId : item.saleId}</td><td>#{item.productId}</td><td>{item.quantity}</td><td>{formatDate(isPurchase ? item.purchaseDate : item.saleDate)}</td>{!isPurchase && <td className="ops-saga-id">{item.sagaId || "—"}</td>}</tr>)}</tbody></table></div>}
+    <section className="ops-panel">
+      <div className="ops-panel-heading"><div><h2>{title} history</h2><p>{isPurchase ? `${filteredRecords.length} of ${records.length} records` : `${records.length} records returned by the service.`}</p></div>
+        {isPurchase && <button className="ops-button ops-button-light" onClick={exportPurchases} disabled={!sortedRecords.length}>↓ Export CSV</button>}
+      </div>
+      {isPurchase && <div className="ops-purchase-toolbar">
+        <input aria-label="Search purchases" placeholder="Search purchase ID, product ID or name..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
+        <select aria-label="Filter purchase date" value={dateFilter} onChange={(e) => { setDateFilter(e.target.value); setPage(1); }}>
+          <option value="all">All dates</option><option value="today">Today</option><option value="7days">Last 7 days</option><option value="30days">Last 30 days</option>
+        </select>
+        <select aria-label="Sort purchases" value={sortBy} onChange={(e) => { setSortBy(e.target.value); setPage(1); }}>
+          <option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="quantity-high">Highest quantity</option><option value="quantity-low">Lowest quantity</option>
+        </select>
+      </div>}
+      {loading ? <div className="ops-empty">Loading {title.toLowerCase()}...</div> : !(isPurchase ? sortedRecords.length : records.length) ? <div className="ops-empty">{isPurchase && records.length ? "No purchases match your filters." : `No ${title.toLowerCase()} records found yet.`}</div> :
+        <div className="ops-table-wrap"><table className="ops-table"><thead><tr><th>Transaction ID</th><th>Product ID</th>{isPurchase && <th>Product name</th>}<th>Quantity</th><th>Date</th>{!isPurchase && <th>Saga ID</th>}</tr></thead><tbody>
+          {(isPurchase ? paginatedRecords : [...records].reverse()).map((item) => {
+            const product = productById.get(String(item.productId));
+            return <tr key={isPurchase ? item.purchaseId : item.saleId}><td>#{isPurchase ? item.purchaseId : item.saleId}</td><td>#{item.productId}</td>{isPurchase && <td>{product?.name || "—"}</td>}<td>{item.quantity}</td><td>{formatDate(isPurchase ? item.purchaseDate : item.saleDate)}</td>{!isPurchase && <td className="ops-saga-id">{item.sagaId || "—"}</td>}</tr>;
+          })}
+        </tbody></table></div>}
+      {isPurchase && sortedRecords.length > PAGE_SIZE && <div className="ops-pagination">
+        <span>Page {currentPage} of {totalPages} · {sortedRecords.length} purchases</span>
+        <div><button className="ops-button ops-button-light" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={currentPage === 1}>Previous</button>
+          <button className="ops-button ops-button-light" onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={currentPage === totalPages}>Next</button></div>
+      </div>}
     </section>
     <p className="ops-footnote">{isPurchase ? "Purchase requests are handled by the purchase service and its event-driven stock workflow." : "Sale requests return HTTP 202 and start a stock-reservation saga. A new sale record appears after successful processing."}</p>
   </main>;
