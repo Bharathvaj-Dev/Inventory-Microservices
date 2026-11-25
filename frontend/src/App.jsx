@@ -6,6 +6,7 @@ import Navbar from "./components/Navbar";
 import Notifications from "./pages/Notifications";
 import ArchitectureDashboard from "./pages/ArchitectureDashboard";
 import { DashboardPage, InventoryPage, PurchasesPage, SalesPage } from "./OperationsPages";
+import ProductManagement from "./ProductManagement";
 
 const PRODUCT_CATEGORIES = [
   "Electronics",
@@ -208,7 +209,7 @@ function App() {
         <Navbar />
         <Routes>
           <Route path="/" element={<DashboardPage />} />
-          <Route path="/products" element={<div className="products-route"><header className="header"><h1>Product Management</h1><p>Manage your product catalogue</p></header><Products /></div>} />
+          <Route path="/products" element={<ProductManagement />} />
           <Route path="/inventory" element={<InventoryPage />} />
           <Route path="/purchases" element={<PurchasesPage />} />
           <Route path="/sales" element={<SalesPage />} />
