@@ -1,0 +1,18 @@
+.reports-content{max-width:1240px}
+.reports-header-actions{display:flex;gap:9px;align-items:center}
+.reports-filter-panel{display:flex;align-items:end;gap:12px;padding:16px 18px;margin-bottom:18px;background:#fff;border:1px solid #e7edf5;border-radius:13px}
+.reports-filter-panel label{display:grid;gap:6px;color:#64748b;font-size:11px;font-weight:650}
+.reports-filter-panel input,.reports-toolbar input,.reports-toolbar select{height:38px;padding:0 11px;border:1px solid #dce4ef;border-radius:8px;background:#fff;color:#34445d;font:inherit;font-size:12px}
+.reports-filter-panel input{min-width:170px}
+.reports-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin-bottom:20px}
+.reports-metric{display:flex;align-items:center;gap:12px;min-width:0;padding:17px;background:#fff;border:1px solid #e7edf5;border-radius:13px;box-shadow:0 4px 16px rgba(23,45,77,.035)}
+.reports-metric-icon{display:grid;place-items:center;width:39px;height:39px;flex:0 0 39px;border-radius:11px;font-size:19px}
+.reports-metric-icon.purchase{background:#edf4ff;color:#3569ad}.reports-metric-icon.sale{background:#eaf8f1;color:#25885b}.reports-metric-icon.balance{background:#fff5e6;color:#a96d17}.reports-metric-icon.products{background:#f1edff;color:#7454ae}
+.reports-metric div{min-width:0}.reports-metric small,.reports-metric span:not(.reports-metric-icon){display:block;color:#8490a2;font-size:10px}
+.reports-metric strong{display:block;margin:3px 0;color:#172944;font-size:23px;line-height:1.2;font-variant-numeric:tabular-nums}
+.reports-panel{margin:18px 0}
+.reports-toolbar{display:grid;grid-template-columns:minmax(200px,1fr) 190px;gap:10px;margin-bottom:14px}
+.reports-toolbar input{min-width:0}
+.reports-subtext{display:block;margin-top:3px;color:#929eae;font-size:10px}
+@media(max-width:950px){.reports-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){.reports-header-actions{flex-wrap:wrap}.reports-header-actions .ops-button{font-size:11px;padding:0 10px}.reports-filter-panel{align-items:stretch;flex-direction:column}.reports-filter-panel input{width:100%;box-sizing:border-box}.reports-metrics{gap:9px}.reports-metric{padding:12px;gap:9px}.reports-metric-icon{width:33px;height:33px;flex-basis:33px;font-size:16px}.reports-metric strong{font-size:19px}.reports-toolbar{grid-template-columns:1fr}}
