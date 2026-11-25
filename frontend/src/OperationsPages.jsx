@@ -157,7 +157,10 @@ function TransactionPage({ type }) {
     finally { setLoading(false); }
   }, [endpoint]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const initialLoad = window.setTimeout(() => { void load(); }, 0);
+    return () => window.clearTimeout(initialLoad);
+  }, [load]);
 
   async function submit(event) {
     event.preventDefault(); setSaving(true); setError(""); setSuccess("");
