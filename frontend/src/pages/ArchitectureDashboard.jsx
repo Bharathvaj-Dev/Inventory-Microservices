@@ -135,9 +135,12 @@ export default function ArchitectureDashboard() {
   }, [fetchHealth, fetchDashboardData]);
 
   useEffect(() => {
-    refreshAll(true);
-    const intervalId = setInterval(() => refreshAll(false), 30000);
-    return () => clearInterval(intervalId);
+    const initialLoad = window.setTimeout(() => { void refreshAll(true); }, 0);
+    const intervalId = window.setInterval(() => { void refreshAll(false); }, 30000);
+    return () => {
+      window.clearTimeout(initialLoad);
+      window.clearInterval(intervalId);
+    };
   }, [refreshAll]);
 
   const services = SERVICES.map((service) => ({
